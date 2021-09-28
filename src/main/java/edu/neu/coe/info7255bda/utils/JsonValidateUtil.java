@@ -11,7 +11,9 @@ import org.springframework.util.ResourceUtils;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class JsonValidateUtil {
     private final static JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
@@ -36,28 +38,35 @@ public class JsonValidateUtil {
         return jsonSchemaNode;
     }
 
-    public static boolean validateJson(String schemaFilePath, String jsonStr){
+    public static ProcessingReport getReport(String schemaFilePath, String jsonStr){
         ProcessingReport report;
         JsonNode jsonSchema = schemaToJsonNode(schemaFilePath);
         JsonNode jsonData = strToJsonNode(jsonStr);
         report = factory.getValidator().validateUnchecked(jsonSchema, jsonData);
+        return report;
+    }
 
-        if (report.isSuccess()){
-            return true;
-        }
-        else {
-            Iterator<ProcessingMessage> it = report.iterator();
-            StringBuilder sb = new StringBuilder();
-            sb.append("Json format error: ");
-            while (it.hasNext()){
-                ProcessingMessage pm = it.next();
-                if (!LogLevel.WARNING.equals(pm.getLogLevel())) {
-                    sb.append(pm);
+    public static boolean validateJson(String schemaFilePath, String jsonStr){
+        return getReport(schemaFilePath, jsonStr).isSuccess();
+    }
+
+    public static List<String> findMissingProperties(String schemaFilePath, String jsonStr){
+        ProcessingReport report = getReport(schemaFilePath, jsonStr);
+        Iterator<ProcessingMessage> it = report.iterator();
+        StringBuilder sb = new StringBuilder();
+        List<String> missingP = new ArrayList<>();
+        sb.append("Json format error: ");
+        while (it.hasNext()){
+            ProcessingMessage pm = it.next();
+            if (!LogLevel.WARNING.equals(pm.getLogLevel())) {
+                JsonNode node = pm.asJson().get("missing");
+                for (JsonNode n : node){
+                    missingP.add(n.asText());
                 }
+                sb.append(pm);
             }
-            System.out.println(sb);
-            return false;
         }
-
+        System.out.println(sb);
+        return missingP;
     }
 }
