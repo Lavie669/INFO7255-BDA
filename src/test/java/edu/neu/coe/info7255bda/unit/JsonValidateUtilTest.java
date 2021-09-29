@@ -15,9 +15,9 @@ public class JsonValidateUtilTest {
     @Test
     public void testPJsonValidation(){
         String strJson1 = JsonFileUtil.read(testJsonFilePath1);
-        // test json 2 missed the creationDate
+        // test_json2 missed the creationDate
         String strJson2 = JsonFileUtil.read(testJsonFilePath2);
-        assertTrue(JsonValidateUtil.validateJson(planSchemaFilePath, strJson1));
-        assertTrue(!JsonValidateUtil.validateJson(planSchemaFilePath, strJson2));
+        assertTrue(JsonValidateUtil.isValidated(planSchemaFilePath, strJson1));
+        assertTrue(!JsonValidateUtil.isValidated(planSchemaFilePath, strJson2));
     }
 }

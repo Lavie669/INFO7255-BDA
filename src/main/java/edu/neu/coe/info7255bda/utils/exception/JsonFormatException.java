@@ -1,18 +1,14 @@
 package edu.neu.coe.info7255bda.utils.exception;
 
-import edu.neu.coe.info7255bda.constant.StatusCode;
-
 public class JsonFormatException extends RuntimeException{
-    private StatusCode sc;
+    private final int code;
 
-    public JsonFormatException() {super();}
-
-    public JsonFormatException(StatusCode sc) {
-        super(sc.getMessage());
-        this.sc = sc;
+    public JsonFormatException(int code, String msg) {
+        super(msg);
+        this.code = code;
     }
 
     public int getCode(){
-        return this.sc.getCode();
+        return code;
     }
 }

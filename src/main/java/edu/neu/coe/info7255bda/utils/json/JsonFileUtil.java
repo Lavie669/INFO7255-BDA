@@ -1,6 +1,7 @@
 package edu.neu.coe.info7255bda.utils.json;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class JsonFileUtil {
 
@@ -8,7 +9,7 @@ public class JsonFileUtil {
         StringBuilder sb = new StringBuilder();
         try{
             InputStream in = new FileInputStream(filePath);
-            InputStreamReader reader = new InputStreamReader(in,"UTF-8");
+            InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8);
             BufferedReader br = new BufferedReader(reader);
             String line = null;
             while ((line = br.readLine()) != null) {
