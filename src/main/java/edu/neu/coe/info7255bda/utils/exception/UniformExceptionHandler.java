@@ -29,9 +29,9 @@ public class UniformExceptionHandler {
         return ResultData.fail(StatusCode.REQUEST_METHOD_ERROR.getCode(), StatusCode.REQUEST_METHOD_ERROR.getMessage());
     }
 
-    @ExceptionHandler(JsonFormatException.class)
+    @ExceptionHandler(CustomerException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ResultData<String> jsonFormatException(JsonFormatException e) {
+    public ResultData<String> jsonFormatException(CustomerException e) {
         log.error("Error message: {}", e.getMessage(), e);
         return ResultData.fail(e.getCode(), e.getMessage());
     }

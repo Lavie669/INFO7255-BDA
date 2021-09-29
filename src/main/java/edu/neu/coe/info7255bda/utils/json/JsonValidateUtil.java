@@ -9,8 +9,9 @@ import com.github.fge.jsonschema.core.report.ProcessingMessage;
 import com.github.fge.jsonschema.core.report.ProcessingReport;
 import com.github.fge.jsonschema.main.JsonSchemaFactory;
 import edu.neu.coe.info7255bda.constant.StatusCode;
-import edu.neu.coe.info7255bda.utils.exception.JsonFormatException;
+import edu.neu.coe.info7255bda.utils.exception.CustomerException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.util.ResourceUtils;
 
 import java.io.FileReader;
@@ -20,6 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 
 @Slf4j
+@Component
 public class JsonValidateUtil {
     private final static JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
 
@@ -28,7 +30,7 @@ public class JsonValidateUtil {
         try {
             jsonNode = JsonLoader.fromString(jsonStr);
         } catch (IOException e) {
-            throw new JsonFormatException(StatusCode.JSON_FORMAT_ERROR.getCode(), StatusCode.JSON_FORMAT_ERROR.getMessage());
+            throw new CustomerException(StatusCode.JSON_FORMAT_ERROR.getCode(), StatusCode.JSON_FORMAT_ERROR.getMessage());
         }
         return jsonNode;
     }
@@ -89,8 +91,13 @@ public class JsonValidateUtil {
             ProcessingMessage pm = it.next();
             if (!LogLevel.WARNING.equals(pm.getLogLevel())) {
                 JsonNode node = pm.asJson().get("missing");
-                for (JsonNode n : node){
-                    missingP.add(n.asText());
+                if (node == null){
+                    throw new CustomerException(StatusCode.JSON_SCHEMA_ERROR.getCode(), "Something wrong with the " + pm.asJson().get("keyword").asText());
+                }
+                else {
+                    for (JsonNode n : node){
+                        missingP.add(n.asText());
+                    }
                 }
             }
         }

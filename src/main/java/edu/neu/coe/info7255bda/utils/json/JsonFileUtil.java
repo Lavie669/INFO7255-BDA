@@ -1,8 +1,11 @@
 package edu.neu.coe.info7255bda.utils.json;
 
+import org.springframework.stereotype.Component;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
+@Component
 public class JsonFileUtil {
 
     public static String read(String filePath){

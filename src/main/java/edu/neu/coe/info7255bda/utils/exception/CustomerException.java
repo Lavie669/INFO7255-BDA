@@ -1,9 +1,9 @@
 package edu.neu.coe.info7255bda.utils.exception;
 
-public class JsonFormatException extends RuntimeException{
+public class CustomerException extends RuntimeException{
     private final int code;
 
-    public JsonFormatException(int code, String msg) {
+    public CustomerException(int code, String msg) {
         super(msg);
         this.code = code;
     }
