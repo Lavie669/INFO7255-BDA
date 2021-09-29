@@ -1,10 +1,20 @@
 package edu.neu.coe.info7255bda.controller;
 
-import edu.neu.coe.info7255bda.utils.JsonValidateUtil;
-import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.fge.jackson.JsonLoader;
+import edu.neu.coe.info7255bda.constant.StatusCode;
+import edu.neu.coe.info7255bda.model.VO.ResultData;
+import edu.neu.coe.info7255bda.utils.exception.JsonFormatException;
+import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
+import lombok.NonNull;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("plan")
@@ -19,21 +29,17 @@ public class PlanController {
     }
 
     @PostMapping("/json/validate")
-    public String validateJson(@RequestBody String strJson){
+    public ResultData<String> validateJson(@RequestBody String strJson){
         if (JsonValidateUtil.validateJson(planSchemaFilePath, strJson)){
-            return "No error found.";
+            return ResultData.success("No error found");
         }
         else {
-            return "Json format error!!!";
+            throw new JsonFormatException(StatusCode.JSON_SCHEMA_ERROR);
         }
     }
 
     @PostMapping("/json/findmissing")
-    public String findMissing(@RequestBody String strJson){
-        List<String> result = JsonValidateUtil.findMissingProperties(planSchemaFilePath, strJson);
-        if (result.isEmpty()){
-            return "Nothing is missing.";
-        }
-        return "Missing: " + result;
+    public List<String> findMissing(@RequestBody String strJson){
+        return JsonValidateUtil.findMissingProperties(planSchemaFilePath, strJson);
     }
 }

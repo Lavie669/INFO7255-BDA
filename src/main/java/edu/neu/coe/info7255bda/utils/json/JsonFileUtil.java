@@ -1,4 +1,4 @@
-package edu.neu.coe.info7255bda.utils;
+package edu.neu.coe.info7255bda.utils.json;
 
 import java.io.*;
 

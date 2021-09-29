@@ -2,8 +2,8 @@ package edu.neu.coe.info7255bda.unit;
 
 import static org.junit.Assert.*;
 
-import edu.neu.coe.info7255bda.utils.JsonFileUtil;
-import edu.neu.coe.info7255bda.utils.JsonValidateUtil;
+import edu.neu.coe.info7255bda.utils.json.JsonFileUtil;
+import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
 import org.junit.jupiter.api.Test;
 
 public class JsonValidateUtilTest {
@@ -15,7 +15,7 @@ public class JsonValidateUtilTest {
     @Test
     public void testPJsonValidation(){
         String strJson1 = JsonFileUtil.read(testJsonFilePath1);
-        // missing the creationDate
+        // test json 2 missed the creationDate
         String strJson2 = JsonFileUtil.read(testJsonFilePath2);
         assertTrue(JsonValidateUtil.validateJson(planSchemaFilePath, strJson1));
         assertTrue(!JsonValidateUtil.validateJson(planSchemaFilePath, strJson2));

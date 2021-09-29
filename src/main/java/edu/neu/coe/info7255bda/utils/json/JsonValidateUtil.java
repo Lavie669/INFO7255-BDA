@@ -1,5 +1,7 @@
-package edu.neu.coe.info7255bda.utils;
+package edu.neu.coe.info7255bda.utils.json;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jackson.JsonLoader;
 import com.github.fge.jackson.JsonNodeReader;
@@ -7,6 +9,10 @@ import com.github.fge.jsonschema.core.report.LogLevel;
 import com.github.fge.jsonschema.core.report.ProcessingMessage;
 import com.github.fge.jsonschema.core.report.ProcessingReport;
 import com.github.fge.jsonschema.main.JsonSchemaFactory;
+import edu.neu.coe.info7255bda.constant.StatusCode;
+import edu.neu.coe.info7255bda.utils.exception.JsonFormatException;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ResourceUtils;
 
 import java.io.FileReader;
@@ -15,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+@Slf4j
 public class JsonValidateUtil {
     private final static JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
 
@@ -23,7 +30,7 @@ public class JsonValidateUtil {
         try {
             jsonNode = JsonLoader.fromString(jsonStr);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new JsonFormatException(StatusCode.JSON_FORMAT_ERROR);
         }
         return jsonNode;
     }
@@ -50,12 +57,11 @@ public class JsonValidateUtil {
         return getReport(schemaFilePath, jsonStr).isSuccess();
     }
 
-    public static List<String> findMissingProperties(String schemaFilePath, String jsonStr){
+
+    public static List<String> findMissingProperties(String schemaFilePath,String jsonStr){
         ProcessingReport report = getReport(schemaFilePath, jsonStr);
         Iterator<ProcessingMessage> it = report.iterator();
-        StringBuilder sb = new StringBuilder();
         List<String> missingP = new ArrayList<>();
-        sb.append("Json format error: ");
         while (it.hasNext()){
             ProcessingMessage pm = it.next();
             if (!LogLevel.WARNING.equals(pm.getLogLevel())) {
@@ -63,10 +69,11 @@ public class JsonValidateUtil {
                 for (JsonNode n : node){
                     missingP.add(n.asText());
                 }
-                sb.append(pm);
             }
         }
-        System.out.println(sb);
+        if (!missingP.isEmpty()){
+            log.info("Json has missing required properties: " + missingP);
+        }
         return missingP;
     }
 }

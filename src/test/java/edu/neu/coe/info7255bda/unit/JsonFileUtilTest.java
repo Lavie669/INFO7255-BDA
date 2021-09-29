@@ -2,7 +2,7 @@ package edu.neu.coe.info7255bda.unit;
 
 import static org.junit.Assert.*;
 
-import edu.neu.coe.info7255bda.utils.JsonFileUtil;
+import edu.neu.coe.info7255bda.utils.json.JsonFileUtil;
 import org.junit.jupiter.api.Test;
 
 public class JsonFileUtilTest {
