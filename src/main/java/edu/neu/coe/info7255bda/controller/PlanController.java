@@ -3,6 +3,7 @@ package edu.neu.coe.info7255bda.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.neu.coe.info7255bda.constant.StatusCode;
 import edu.neu.coe.info7255bda.model.VO.ResultData;
+import edu.neu.coe.info7255bda.service.PlanService;
 import edu.neu.coe.info7255bda.utils.exception.CustomerException;
 import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
 import edu.neu.coe.info7255bda.utils.redis.RedisUtil;
@@ -20,11 +21,12 @@ public class PlanController {
 
     public static final String DIR_PREFIX = "./src/main/resources";
     private final static String planSchemaFilePath = DIR_PREFIX + "/json/schema/jsonSchema.json";
-    private final static String objectID = "objectId";
-    private final static String objectType = "objectType";
 
     @Autowired
     private RedisUtil redisUtil;
+
+    @Autowired
+    private PlanService planService;
 
     @GetMapping("/hello")
     public String hello() {
@@ -33,27 +35,17 @@ public class PlanController {
 
     @PostMapping("/add")
     public Map<String, String> addPlan(@RequestBody String strJson){
-        if (JsonValidateUtil.isValidated(planSchemaFilePath, strJson)){
-            JsonNode jsonData = JsonValidateUtil.strToJsonNode(strJson);
-            Map<String, String> map = new HashMap<>();
-            map.put(objectID, jsonData.get(objectID).asText());
-            map.put(objectType, jsonData.get(objectType).asText());
-            return map;
-        }
-        else {
-            String result = JsonValidateUtil.validateJson(planSchemaFilePath, strJson);
-            throw new CustomerException(StatusCode.JSON_SCHEMA_ERROR.getCode(), result);
-        }
+        return planService.validateAndAdd(strJson);
+    }
+
+    @GetMapping("/get")
+    public Object getPlanByKey(@RequestBody String key){
+        return redisUtil.getByKey(key);
     }
 
     @PostMapping("redis/add")
-    public ResultData<String> setKeyValue(@RequestBody Map<String, Object> paramsMap){
-        if (redisUtil.setKV(paramsMap.get("name").toString(), paramsMap)){
-            return ResultData.success("Successfully set key/value");
-        }
-        else {
-            return ResultData.fail(StatusCode.REDIS_SET_ERROR.getCode(), StatusCode.PARAMETER_ERROR.getMessage());
-        }
+    public ResultData<String> addPlanWithoutValidation(@RequestBody Map<String, Object> paramsMap){
+        return ResultData.success(planService.addByMap(paramsMap));
     }
 
     @GetMapping("redis/getKeys")
