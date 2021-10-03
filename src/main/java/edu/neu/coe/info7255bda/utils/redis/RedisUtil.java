@@ -1,7 +1,7 @@
 package edu.neu.coe.info7255bda.utils.redis;
 
 import edu.neu.coe.info7255bda.constant.StatusCode;
-import edu.neu.coe.info7255bda.utils.exception.CustomerException;
+import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +29,7 @@ public class RedisUtil {
             return object;
         }
         else {
-            throw new CustomerException(StatusCode.REDIS_GET_ERROR.getCode(), StatusCode.REDIS_GET_ERROR.getMessage());
+            throw new Customer400Exception(StatusCode.REDIS_GET_ERROR.getCode(), StatusCode.REDIS_GET_ERROR.getMessage());
         }
     }
 

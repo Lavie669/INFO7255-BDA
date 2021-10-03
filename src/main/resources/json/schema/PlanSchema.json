@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/plan.json",
+
+  "definitions": {
+    "linkedService": {
+      "type": "object",
+      "required": [
+        "_org",
+        "objectId",
+        "objectType",
+        "name"
+      ],
+      "properties": {
+        "_org": {
+          "type": "string",
+          "examples": [
+            "example.com"
+          ]
+        },
+        "objectId": {
+          "type": "string",
+          "examples": [
+            "1234520xvc30asdf-502"
+          ]
+        },
+        "objectType": {
+          "type": "string",
+          "examples": [
+            "service"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "examples": [
+            "Yearly physical"
+          ]
+        }
+      }
+    },
+    "planShares": {
+      "type": "object",
+      "required": [
+        "deductible",
+        "_org",
+        "copay",
+        "objectId",
+        "objectType"
+      ],
+      "properties": {
+        "deductible": {
+          "type": "integer",
+          "examples": [
+            2000
+          ]
+        },
+        "_org": {
+          "type": "string",
+          "examples": [
+            "example.com"
+          ]
+        },
+        "copay": {
+          "type": "integer",
+          "examples": [
+            23
+          ]
+        },
+        "objectId": {
+          "type": "string",
+          "examples": [
+            "1234vxc2324sdf-501"
+          ]
+        },
+        "objectType": {
+          "type": "string",
+          "examples": [
+            "membercostshare"
+          ]
+        }
+      }
+    },
+    "linkedPlanServices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "linkedService",
+          "planserviceCostShares",
+          "_org",
+          "objectId",
+          "objectType"
+        ],
+        "properties": {
+          "linkedService": {"$ref": "#/definitions/linkedService"},
+          "planserviceCostShares": {"$ref": "#/definitions/planShares"},
+          "_org": {
+            "type": "string",
+            "examples": [
+              "example.com"
+            ]
+          },
+          "objectId": {
+            "type": "string",
+            "examples": [
+              "1234520xvc30asdf-502"
+            ]
+          },
+          "objectType": {
+            "type": "string",
+            "examples": [
+              "service"
+            ]
+          }
+        }
+      }
+    }
+  },
+
+  "type": "object",
+  "title": "The root schema",
+  "description": "The schema for the json format of medical plan",
+  "default": {},
+  "required": [
+    "planCostShares",
+    "linkedPlanServices",
+    "_org",
+    "objectId",
+    "objectType",
+    "planType",
+    "creationDate"
+  ],
+  "properties": {
+    "planCostShares": {"$ref": "#/definitions/planShares"},
+    "linkedPlanServices": {"$ref": "#/definitions/linkedPlanServices"},
+    "_org": {
+      "$id": "#/plan/_org",
+      "type": "string",
+      "description": "The organization of plan.",
+      "examples": [
+        "example.com"
+      ]
+    },
+    "objectId": {
+      "$id": "#/plan/objectId",
+      "type": "string",
+      "description": "The unique identifier of object.",
+      "examples": [
+        "12xvxc345ssdsds-508"
+      ]
+    },
+    "objectType": {
+      "$id": "#/plan/objectType",
+      "type": "string",
+      "description": "The type of object.",
+      "examples": [
+        "plan"
+      ]
+    },
+    "planType": {
+      "$id": "#/plan/planType",
+      "type": "string",
+      "description": "The type of plan.",
+      "examples": [
+        "inNetwork"
+      ]
+    },
+    "creationDate": {
+      "$id": "#/plan/creationDate",
+      "type": "string",
+      "description": "The creation date of plan.",
+      "examples": [
+        "12-12-2017"
+      ]
+    }
+  }
+}

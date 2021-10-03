@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 public class JsonValidateUtilTest {
     public static final String DIR_PREFIX = "./src/main/resources";
-    private final static String planSchemaFilePath = DIR_PREFIX + "/json/schema/jsonSchema.json";
+    private final static String planSchemaFilePath = DIR_PREFIX + "/json/schema/PlanSchema.json";
     private final static String testJsonFilePath1 = DIR_PREFIX + "/json/testPlanJson1.json";
     private final static String testJsonFilePath2 = DIR_PREFIX + "/json/testPlanJson2.json";
 

@@ -37,9 +37,16 @@ public class UniformExceptionHandler {
         return ResultData.fail(StatusCode.PARAMETER_TYPE_ERROR.getCode(), StatusCode.PARAMETER_TYPE_ERROR.getMessage());
     }
 
-    @ExceptionHandler(CustomerException.class)
+    @ExceptionHandler(Customer400Exception.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ResultData<String> jsonFormatException(CustomerException e) {
+    public ResultData<String> customer400Exception(Customer400Exception e) {
+        log.error("Error message: {}", e.getMessage(), e);
+        return ResultData.fail(e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(Customer304Exception.class)
+    @ResponseStatus(HttpStatus.NOT_MODIFIED)
+    public ResultData<String> customer304Exception(Customer304Exception e) {
         log.error("Error message: {}", e.getMessage(), e);
         return ResultData.fail(e.getCode(), e.getMessage());
     }

@@ -9,7 +9,7 @@ import com.github.fge.jsonschema.core.report.ProcessingMessage;
 import com.github.fge.jsonschema.core.report.ProcessingReport;
 import com.github.fge.jsonschema.main.JsonSchemaFactory;
 import edu.neu.coe.info7255bda.constant.StatusCode;
-import edu.neu.coe.info7255bda.utils.exception.CustomerException;
+import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ResourceUtils;
@@ -25,17 +25,17 @@ import java.util.List;
 public class JsonValidateUtil {
     private final static JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
 
-    public static JsonNode strToJsonNode(String jsonStr) {
+    public static JsonNode str2JsonNode(String jsonStr) {
         JsonNode jsonNode = null;
         try {
             jsonNode = JsonLoader.fromString(jsonStr);
         } catch (IOException e) {
-            throw new CustomerException(StatusCode.JSON_FORMAT_ERROR.getCode(), StatusCode.JSON_FORMAT_ERROR.getMessage());
+            throw new Customer400Exception(StatusCode.JSON_FORMAT_ERROR.getCode(), StatusCode.JSON_FORMAT_ERROR.getMessage());
         }
         return jsonNode;
     }
 
-    private static JsonNode schemaToJsonNode(String schemaFilePath){
+    private static JsonNode schema2JsonNode(String schemaFilePath){
         JsonNode jsonSchemaNode = null;
         try{
             jsonSchemaNode = new JsonNodeReader().fromReader(new FileReader(ResourceUtils.getFile(schemaFilePath)));
@@ -47,8 +47,8 @@ public class JsonValidateUtil {
 
     public static ProcessingReport getReport(String schemaFilePath, String jsonStr){
         ProcessingReport report;
-        JsonNode jsonSchema = schemaToJsonNode(schemaFilePath);
-        JsonNode jsonData = strToJsonNode(jsonStr);
+        JsonNode jsonSchema = schema2JsonNode(schemaFilePath);
+        JsonNode jsonData = str2JsonNode(jsonStr);
         report = factory.getValidator().validateUnchecked(jsonSchema, jsonData);
         return report;
     }
@@ -63,10 +63,15 @@ public class JsonValidateUtil {
                 System.out.println(pm);
                 JsonNode jsonData = pm.asJson();
                 if (jsonData.get("keyword").asText().equals("required")){
-                    sb.append(pm.getMessage());
+                    String position = jsonData.get("instance").get("pointer").asText();
+                    String miss = jsonData.get("missing").toString();
+                    sb.append("Missing required properties: ").append(miss, 1, miss.length()-1);
+                    if (!position.isEmpty()){
+                        sb.append(" at ").append(position);
+                    }
                 }
                 else {
-                    String position = jsonData.get("instance").get("pointer").asText().substring(1);
+                    String position = jsonData.get("instance").get("pointer").asText();
                     String expected = jsonData.get("expected").toString();
                     String found = jsonData.get("found").asText();
                     sb.append("expected-").append(expected, 2, expected.length()-2).append(" ").append("found-").append(found).append(" at ").append(position);
@@ -92,7 +97,7 @@ public class JsonValidateUtil {
             if (!LogLevel.WARNING.equals(pm.getLogLevel())) {
                 JsonNode node = pm.asJson().get("missing");
                 if (node == null){
-                    throw new CustomerException(StatusCode.JSON_SCHEMA_ERROR.getCode(), "Something wrong with the " + pm.asJson().get("keyword").asText());
+                    throw new Customer400Exception(StatusCode.JSON_SCHEMA_ERROR.getCode(), "Something wrong with the " + pm.asJson().get("keyword").asText());
                 }
                 else {
                     for (JsonNode n : node){
