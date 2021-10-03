@@ -30,9 +30,11 @@ public class PlanController {
 
     @PostMapping("/add")
     public Map<String, String> addPlan(@RequestBody String strJson, HttpServletResponse response){
-        JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson).get("creationDate");
-        String token = '"' + DigestUtils.md5DigestAsHex(jsonData.asText().getBytes()) + '"';
-        response.addHeader("ETag", token);
+        JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
+        if (!jsonData.isEmpty()){
+            String token = '"' + DigestUtils.md5DigestAsHex(jsonData.get("creationDate").asText().getBytes()) + '"';
+            response.addHeader("ETag", token);
+        }
         return planService.validateAndAdd(strJson);
     }
 

@@ -52,7 +52,7 @@ public class UniformExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResultData<String> unknownException(Exception e) {
         log.error("Error message: {}", e.getMessage(), e);
         return ResultData.fail(StatusCode.UNKNOWN_ERROR.getCode(), StatusCode.UNKNOWN_ERROR.getMessage());

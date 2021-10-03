@@ -32,6 +32,9 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         if (body instanceof ResultData){
             return body;
         }
+        if (body.toString().contains("status=404, error=Not Found")){
+            return ResultData.fail(404, "Not Found");
+        }
         return ResultData.success(body);
     }
 }
