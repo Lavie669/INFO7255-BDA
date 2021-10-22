@@ -53,8 +53,15 @@ public class JsonValidateUtil {
         return report;
     }
 
-    public static String validateJson(String schemaFilePath,String jsonStr){
-        ProcessingReport report = getReport(schemaFilePath, jsonStr);
+    public static ProcessingReport getReport(JsonNode jsonSchema, String jsonStr){
+        ProcessingReport report;
+        JsonNode jsonData = str2JsonNode(jsonStr);
+        report = factory.getValidator().validateUnchecked(jsonSchema, jsonData);
+        return report;
+    }
+
+    public static String validateJson(JsonNode jsonSchema,String jsonStr){
+        ProcessingReport report = getReport(jsonSchema, jsonStr);
         Iterator<ProcessingMessage> it = report.iterator();
         StringBuilder sb = new StringBuilder();
         while (it.hasNext()){
@@ -86,6 +93,10 @@ public class JsonValidateUtil {
 
     public static boolean isValidated(String schemaFilePath, String jsonStr){
         return getReport(schemaFilePath, jsonStr).isSuccess();
+    }
+
+    public static boolean isValidated(JsonNode jsonSchema, String jsonStr){
+        return getReport(jsonSchema, jsonStr).isSuccess();
     }
 
     public static List<String> findMissingProperties(String schemaFilePath,String jsonStr){

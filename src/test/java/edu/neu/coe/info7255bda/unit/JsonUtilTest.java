@@ -2,10 +2,10 @@ package edu.neu.coe.info7255bda.unit;
 
 import static org.junit.Assert.*;
 
-import edu.neu.coe.info7255bda.utils.json.JsonFileUtil;
+import edu.neu.coe.info7255bda.utils.json.JsonUtil;
 import org.junit.jupiter.api.Test;
 
-public class JsonFileUtilTest {
+public class JsonUtilTest {
     public static final String DIR_PREFIX = "./src/main/resources";
     private final static String testJsonFilePath = DIR_PREFIX + "/json/testReadJson.json";
     private final static String JsonString = "\n" + "{\n" +
@@ -18,7 +18,7 @@ public class JsonFileUtilTest {
 
     @Test
     public void testJsonFileRead(){
-        String strJson = JsonFileUtil.read(testJsonFilePath);
+        String strJson = JsonUtil.readFromFile(testJsonFilePath);
         assertEquals(strJson, JsonString);
     }
 }

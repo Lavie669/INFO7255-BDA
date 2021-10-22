@@ -20,4 +20,10 @@ public interface PlanService {
     String validatePlan(String strJson);
 
     List<String> findMissAtPlan(String strJson);
+
+    JsonNode getJsonPlanByKey(String key);
+
+    Map<String, String> validateAndAddAsGraph(String strJson);
+
+    String addSchema(String strSchema);
 }

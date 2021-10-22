@@ -1,5 +1,6 @@
 package edu.neu.coe.info7255bda.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import edu.neu.coe.info7255bda.constant.StatusCode;
 import edu.neu.coe.info7255bda.model.VO.ResultData;
 import edu.neu.coe.info7255bda.service.PlanService;
@@ -32,8 +33,9 @@ public class TestController {
     }
 
     @GetMapping("redis/getValue")
-    public Object getValueByKey(@RequestBody String key){
-        return redisUtil.getByKey(key);
+    public JsonNode getValueByKey(@RequestBody String key){
+        JsonNode jsonNode = planService.getJsonPlanByKey(key);
+        return jsonNode.get("planCostShares");
     }
 
     @DeleteMapping("redis/del")

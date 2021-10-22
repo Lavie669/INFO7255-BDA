@@ -1,7 +1,10 @@
 package edu.neu.coe.info7255bda.utils.redis;
 
+import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.JsonNode;
 import edu.neu.coe.info7255bda.constant.StatusCode;
 import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
+import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -24,13 +27,7 @@ public class RedisUtil {
     }
 
     public Object getByKey(String key) {
-        Object object = redisTemplate.opsForValue().get(key);
-        if (object != null){
-            return object;
-        }
-        else {
-            throw new Customer400Exception(StatusCode.REDIS_GET_ERROR.getCode(), StatusCode.REDIS_GET_ERROR.getMessage());
-        }
+        return redisTemplate.opsForValue().get(key);
     }
 
     public boolean setKV(String key, Object value) {

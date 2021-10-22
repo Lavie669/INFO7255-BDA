@@ -30,12 +30,28 @@ public class PlanController {
 
     @PostMapping("/add")
     public Map<String, String> addPlan(@RequestBody String strJson, HttpServletResponse response){
-        JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
-        if (!jsonData.isEmpty()){
-            String token = '"' + DigestUtils.md5DigestAsHex(jsonData.get("creationDate").asText().getBytes()) + '"';
-            response.addHeader("ETag", token);
-        }
-        return planService.validateAndAdd(strJson);
+        Map<String, String> res = planService.validateAndAdd(strJson);
+        String token = '"' + DigestUtils.md5DigestAsHex(JsonValidateUtil.str2JsonNode(strJson).get("creationDate").asText().getBytes()) + '"';
+        response.addHeader("ETag", token);
+        return res;
+    }
+
+    @PostMapping("/add/graph")
+    public Map<String, String> addPlanAsGraph(@RequestBody String strJson, HttpServletResponse response){
+        Map<String, String> res = planService.validateAndAddAsGraph(strJson);
+        String token = '"' + DigestUtils.md5DigestAsHex(JsonValidateUtil.str2JsonNode(strJson).get("creationDate").asText().getBytes()) + '"';
+        response.addHeader("ETag", token);
+        return res;
+    }
+
+    @PostMapping("add/schema")
+    public ResultData<String> addPlanSchema(@RequestBody String strSchema){
+        return ResultData.success(planService.addSchema(strSchema));
+    }
+
+    @GetMapping("/get/schema")
+    public Object getPlanSchema(@RequestBody String strSchema){
+        return planService.getPlanByKey(strSchema);
     }
 
     @GetMapping("/get/{id}")
