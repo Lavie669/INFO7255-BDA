@@ -26,4 +26,14 @@ public interface PlanService {
     Map<String, String> validateAndAddAsGraph(String strJson);
 
     String addSchema(String strSchema);
+
+    Object getGraphByKey(String key);
+
+    String delGraphByKey(String key);
+
+    String delEdgeByKey(String key);
+
+    String delEdgeByKeyAndN(String key, int n);
+
+    Map<String, String> addOtherPlan(String strJson);
 }

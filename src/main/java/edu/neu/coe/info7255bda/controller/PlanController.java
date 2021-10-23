@@ -49,18 +49,26 @@ public class PlanController {
         return ResultData.success(planService.addSchema(strSchema));
     }
 
-    @GetMapping("/get/schema")
-    public Object getPlanSchema(@RequestBody String strSchema){
-        return planService.getPlanByKey(strSchema);
+    @PostMapping("/add/other")
+    public Map<String, String> addPlanAsGraph(@RequestBody String strJson){
+        return planService.addOtherPlan(strJson);
+    }
+
+    @GetMapping("/get/{type}/{id}")
+    public Object getByTypeAndID(@PathVariable("type") String objType, @PathVariable("id") String objID){
+        return planService.getGraphByKey(objType + '_' + objID);
     }
 
     @GetMapping("/get/{id}")
     public Object getPlanByKey(@PathVariable("id") String key, HttpServletRequest request){
         Object obj = planService.getPlanByKey(key);
-        String token = JsonValidateUtil.str2JsonNode(JSON.toJSONString(obj)).get("creationDate").asText();
-        String previousToken = request.getHeader("If-None-Match");
-        if (previousToken != null && previousToken.equals(DigestUtils.md5DigestAsHex(token.getBytes()))){
-            throw new Customer304Exception(StatusCode.NOT_MODIFIED.getCode(), StatusCode.NOT_MODIFIED.getMessage());
+        JsonNode jsonNode = JsonValidateUtil.str2JsonNode(JSON.toJSONString(obj));
+        if (jsonNode.hasNonNull("creationDate")){
+            String token = jsonNode.get("creationDate").asText();
+            String previousToken = request.getHeader("If-None-Match");
+            if (previousToken != null && previousToken.equals(DigestUtils.md5DigestAsHex(token.getBytes()))){
+                throw new Customer304Exception(StatusCode.NOT_MODIFIED.getCode(), StatusCode.NOT_MODIFIED.getMessage());
+            }
         }
         return obj;
     }
@@ -68,6 +76,23 @@ public class PlanController {
     @DeleteMapping("/del/{id}")
     public ResultData<String> delByKey(@PathVariable("id") String key){
         return ResultData.success(planService.delPlanByKey(key));
+    }
+
+    @DeleteMapping("/del/{type}/{id}")
+    public ResultData<String> delByTypeAndID(@PathVariable("type") String objType, @PathVariable("id") String objID){
+        return ResultData.success(planService.delGraphByKey(objType + '_' + objID));
+    }
+
+    @DeleteMapping("/del/{type}/{id}/{type2}")
+    public ResultData<String> delPlanEdge(@PathVariable("type") String objType, @PathVariable("id") String objID,
+                                            @PathVariable("type2") String objType2){
+        return ResultData.success(planService.delEdgeByKey(objType + '_' + objID + '_' + objType2));
+    }
+
+    @DeleteMapping("/del/{type}/{id}/{type2}/{n}")
+    public ResultData<String> delPlanNthEdge(@PathVariable("type") String objType, @PathVariable("id") String objID,
+                                          @PathVariable("type2") String objType2, @PathVariable("n") String n){
+        return ResultData.success(planService.delEdgeByKeyAndN(objType + '_' + objID + '_' + objType2, Integer.parseInt(n)));
     }
 
     @PostMapping("/json/validate")

@@ -7,9 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class JsonUtil {
@@ -36,11 +34,11 @@ public class JsonUtil {
         return sb.toString();
     }
 
-    public static Map<String, String> convert2Graph(JsonNode jsonData, String key){
+    public static Map<String, String> convert2Graph(JsonNode jsonData, String key, String fieldName){
         Map<String, String> map = new HashMap<>();
         String ownKey = jsonData.get(objectType).asText() + '_' + jsonData.get(objectId).asText();
-        if (!key.isEmpty()){
-            map.put(key+'_'+jsonData.get(objectType).asText(), ownKey);
+        if (!key.isEmpty()&&!fieldName.isEmpty()){
+            map.put(key+'_'+fieldName, ownKey);
         }
         ObjectNode objectNode = new ObjectMapper().createObjectNode();
         Iterator<String> iterator = jsonData.fieldNames();
@@ -50,7 +48,7 @@ public class JsonUtil {
             if (node.isContainerNode()){
                 if (node.isArray()){
                     for (JsonNode n : node){
-                        Map<String, String> m = convert2Graph(n, ownKey);
+                        Map<String, String> m = convert2Graph(n, ownKey, field);
                         m.forEach((k ,v) ->{
                             if (map.containsKey(k)){
                                 map.put(k, map.get(k) + ',' + v);
@@ -62,7 +60,7 @@ public class JsonUtil {
                     }
                 }
                 else {
-                    map.putAll(convert2Graph(node, ownKey));
+                    map.putAll(convert2Graph(node, ownKey, field));
                 }
             }
             else {
@@ -74,7 +72,9 @@ public class JsonUtil {
     }
 
     public static void main(String[] args){
-        JsonNode jsonNode = JsonValidateUtil.str2JsonNode(readFromFile(testJson));
-        convert2Graph(jsonNode, "");
+        String s1 = "planservice_27283xvx9asdff-504";
+        String s2 = "planservice_27283xvx9asdff-504_linkedService";
+        String s3 = s2.replace(s1+"_", "");
+        System.out.println(s3);
     }
 }

@@ -45,6 +45,15 @@ public class JsonValidateUtil {
         return jsonSchemaNode;
     }
 
+    public static boolean isJson(String jsonStr) {
+        try {
+            JsonLoader.fromString(jsonStr);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     public static ProcessingReport getReport(String schemaFilePath, String jsonStr){
         ProcessingReport report;
         JsonNode jsonSchema = schema2JsonNode(schemaFilePath);
