@@ -21,13 +21,17 @@ public interface PlanService {
 
     List<String> findMissAtPlan(String strJson);
 
-    JsonNode getJsonPlanByKey(String key);
+    JsonNode getSchema();
 
     Map<String, String> validateAndAddAsGraph(String strJson);
 
     String addSchema(String strSchema);
 
     Object getGraphByKey(String key);
+
+    Object getGraphWithEtag(String key, String eTag);
+
+    Object getValueWithEtag(String key, String eTag);
 
     String delGraphByKey(String key);
 
@@ -36,4 +40,6 @@ public interface PlanService {
     String delEdgeByKeyAndN(String key, int n);
 
     Map<String, String> addOtherPlan(String strJson);
+
+    String updatePlan(String key, String strJson);
 }

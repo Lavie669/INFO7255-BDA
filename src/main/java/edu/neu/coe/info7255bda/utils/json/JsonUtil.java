@@ -3,7 +3,9 @@ package edu.neu.coe.info7255bda.utils.json;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.neu.coe.info7255bda.utils.redis.RedisUtil;
 import org.springframework.stereotype.Component;
+import org.springframework.util.DigestUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +15,8 @@ import java.util.*;
 public class JsonUtil {
 
     public static final String DIR_PREFIX = "./src/main/resources";
-    private final static String testJson = DIR_PREFIX + "/json/testPlanJson1.json";
+    private final static String testJson1 = DIR_PREFIX + "/json/testPlanJson1.json";
+    private final static String testJson2 = DIR_PREFIX + "/json/testPlanJson2.json";
     private final static String objectId = "objectId";
     private final static String objectType = "objectType";
 
@@ -72,9 +75,7 @@ public class JsonUtil {
     }
 
     public static void main(String[] args){
-        String s1 = "planservice_27283xvx9asdff-504";
-        String s2 = "planservice_27283xvx9asdff-504_linkedService";
-        String s3 = s2.replace(s1+"_", "");
-        System.out.println(s3);
+        String edge = ",123";
+        System.out.println(edge.contains(",123"));
     }
 }

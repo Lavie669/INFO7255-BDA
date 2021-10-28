@@ -22,6 +22,11 @@ public class TestController {
     @Autowired
     private PlanService planService;
 
+    @GetMapping("/get/{type}/{id}")
+    public Object getByTypeAndID(@PathVariable("type") String objType, @PathVariable("id") String objID){
+        return planService.getGraphByKey(objType + '_' + objID);
+    }
+
     @PostMapping("redis/add")
     public ResultData<String> addPlanWithoutValidation(@RequestBody Map<String, Object> paramsMap){
         return ResultData.success(planService.addByMap(paramsMap));
@@ -33,9 +38,8 @@ public class TestController {
     }
 
     @GetMapping("redis/getValue")
-    public JsonNode getValueByKey(@RequestBody String key){
-        JsonNode jsonNode = planService.getJsonPlanByKey(key);
-        return jsonNode.get("planCostShares");
+    public Object getValueByKey(@RequestBody String key){
+        return redisUtil.getByKey(key);
     }
 
     @DeleteMapping("redis/del")

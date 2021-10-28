@@ -8,22 +8,26 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.neu.coe.info7255bda.constant.StatusCode;
 import edu.neu.coe.info7255bda.model.VO.ResultData;
 import edu.neu.coe.info7255bda.service.PlanService;
+import edu.neu.coe.info7255bda.utils.exception.Customer304Exception;
 import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
 import edu.neu.coe.info7255bda.utils.json.JsonUtil;
 import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
 import edu.neu.coe.info7255bda.utils.redis.RedisUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
 
 import java.util.*;
 
 @Service("planService")
+@Slf4j
 public class planServiceImpl implements PlanService {
 
     public static final String DIR_PREFIX = "./src/main/resources";
-    private final static String planSchemaFilePath = DIR_PREFIX + "/json/schema/PlanSchema.json";
-    private final static String key = "objectId";
-    private final static String objectType = "objectType";
+    private final static String PLAN_SCHEMA_FILE_PATH = DIR_PREFIX + "/json/schema/PlanSchema.json";
+    private final static String OBJECT_ID = "objectId";
+    private final static String OBJECT_TYPE = "objectType";
     private final static String SCHEMA = "planSchema";
 
     @Autowired
@@ -31,10 +35,10 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public Map<String, String> addByJson(JsonNode jsonData) {
-        if (redisUtil.setKV(jsonData.get(key).asText(), jsonData)){
+        if (redisUtil.setKV(jsonData.get(OBJECT_ID).asText(), jsonData)){
             Map<String, String> res = new HashMap<>();
-            res.put(key, jsonData.get(key).asText());
-            res.put(objectType, jsonData.get(objectType).asText());
+            res.put(OBJECT_ID, jsonData.get(OBJECT_ID).asText());
+            res.put(OBJECT_TYPE, jsonData.get(OBJECT_TYPE).asText());
             return res;
         }
         else {
@@ -44,7 +48,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String addByMap(Map<String, Object> map) {
-        if (redisUtil.setKV(map.get(key).toString(), map)){
+        if (redisUtil.setKV(map.get(OBJECT_ID).toString(), map)){
             return "Successfully set key/value";
         }
         else {
@@ -54,12 +58,12 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public Map<String, String> validateAndAdd(String strJson) {
-        if (JsonValidateUtil.isValidated(planSchemaFilePath, strJson)){
+        if (JsonValidateUtil.isValidated(PLAN_SCHEMA_FILE_PATH, strJson)){
             JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
             return addByJson(jsonData);
         }
         else {
-            String result = JsonValidateUtil.validateJson(JsonValidateUtil.str2JsonNode(planSchemaFilePath), strJson);
+            String result = JsonValidateUtil.validateJson(JsonValidateUtil.str2JsonNode(PLAN_SCHEMA_FILE_PATH), strJson);
             throw new Customer400Exception(StatusCode.JSON_SCHEMA_ERROR.getCode(), result);
         }
     }
@@ -93,7 +97,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String validatePlan(String strJson) {
-        if (JsonValidateUtil.isValidated(planSchemaFilePath, strJson)){
+        if (JsonValidateUtil.isValidated(PLAN_SCHEMA_FILE_PATH, strJson)){
             return "No error found";
         }
         else {
@@ -103,11 +107,15 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public List<String> findMissAtPlan(String strJson) {
-        return JsonValidateUtil.findMissingProperties(planSchemaFilePath, strJson);
+        return JsonValidateUtil.findMissingProperties(PLAN_SCHEMA_FILE_PATH, strJson);
     }
 
     @Override
-    public JsonNode getJsonPlanByKey(String key) {
+    public JsonNode getSchema() {
+        return getJsonPlanByKey(SCHEMA);
+    }
+
+    private JsonNode getJsonPlanByKey(String key) {
         return JsonValidateUtil.str2JsonNode(JSON.toJSONString(getPlanByKey(key)));
 
     }
@@ -161,15 +169,20 @@ public class planServiceImpl implements PlanService {
                         ArrayNode arrayNode = new ObjectMapper().createArrayNode();
                         String[] edges = edge.split(",");
                         for (String e : edges){
-                            if (hasEdge(e)){
-                                arrayNode.add((ObjectNode) getGraphByKey(e));
-                            }
-                            else {
-                                JsonNode jsonData = JsonValidateUtil.str2JsonNode(redisUtil.getByKey(e).toString());
-                                arrayNode.add(jsonData);
+                            if (!e.isEmpty()){
+                                if (hasEdge(e)){
+                                    arrayNode.add((ObjectNode) getGraphByKey(e));
+                                }
+                                else {
+                                    JsonNode jsonData = JsonValidateUtil.str2JsonNode(redisUtil.getByKey(e).toString());
+                                    arrayNode.add(jsonData);
+                                }
                             }
                         }
                         objectNode.putArray(fieldName).addAll(arrayNode);
+                    }
+                    else if (edge.isEmpty()){
+                        map.put(fieldName, new ObjectMapper().createObjectNode());
                     }
                     else {
                         JsonNode jsonData = JsonValidateUtil.str2JsonNode(redisUtil.getByKey(edge).toString());
@@ -194,12 +207,25 @@ public class planServiceImpl implements PlanService {
     }
 
     @Override
+    public Object getGraphWithEtag(String key, String eTag) {
+        checkEtag(getPlanByKey(key), eTag);
+        return getGraphByKey(key);
+    }
+
+    @Override
+    public Object getValueWithEtag(String key, String eTag) {
+        Object obj = getPlanByKey(key);
+        checkEtag(obj, eTag);
+        return obj;
+    }
+
+    @Override
     public String delGraphByKey(String key) {
         Set<String> keys = redisUtil.getKeys(key + "*");
-        if (keys == null){
+        if (keys.size() == 0){
             throw new Customer400Exception(StatusCode.REDIS_GET_ERROR.getCode(), StatusCode.REDIS_GET_ERROR.getMessage());
         }
-        if (keys.size() == 1){
+        else if (keys.size() == 1){
             return "No edge need to be deleted!";
         }
         else {
@@ -214,7 +240,11 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String delEdgeByKey(String key) {
-        if (redisUtil.delByKey(key)){
+        String newS = "";
+        if (redisUtil.getByKey(key).toString().contains(",")){
+            newS += ',';
+        }
+        if (redisUtil.setKV(key, newS)){
             return "Deletion success";
         }
         else {
@@ -244,20 +274,89 @@ public class planServiceImpl implements PlanService {
         return addAsGraph(jsonData);
     }
 
+    @Override
+    public String updatePlan(String key, String strJson) {
+        JsonNode jsonNode = JsonValidateUtil.str2JsonNode(strJson);
+        Set<String> keys = redisUtil.getKeys(key + "*");
+        Iterator<String> iterator = jsonNode.fieldNames();
+        while (iterator.hasNext()){
+            String fieldName = iterator.next();
+            JsonNode node = jsonNode.get(fieldName);
+            if (node.isContainerNode()){
+                String edge = key + '_' + fieldName;
+                if (keys.contains(edge)){
+                    String edgeVal = redisUtil.getByKey(edge).toString();
+                    if (node.isArray()){
+                        node.forEach(n->{
+                            updateGraph(edge, edgeVal, n);
+                        });
+                    }
+                    else {
+                        updateGraph(edge, edgeVal, node);
+                    }
+                }
+                else {
+                    throw new Customer400Exception(400, "Nothing can be updated");
+                }
+            }
+            else {// TODO: 2021/10/29  update for other properties of plan
+            }
+
+        }
+        return null;
+    }
+
+    private void updateGraph(String edge, String edgeVal, JsonNode newData){
+        checkNode(newData);
+        String ownKey = newData.get(OBJECT_TYPE).asText() + '_' + newData.get(OBJECT_ID).asText();
+        if (!edgeVal.contains(ownKey)) {
+            if (edgeVal.contains(",")){
+                set(edge, edgeVal + ',' + ownKey);
+            }
+            else {
+                set(edge, ownKey);
+            }
+        }
+        JsonUtil.convert2Graph(newData, "", "").forEach(this::set);
+    }
+
+    private void set(String k, Object v){
+        if (!redisUtil.setKV(k, v.toString())){
+            throw new Customer400Exception(StatusCode.REDIS_SET_ERROR.getCode(), StatusCode.REDIS_SET_ERROR.getMessage());
+        }
+    }
+
     private Map<String, String> addAsGraph(JsonNode data){
         Map<String, String> map = JsonUtil.convert2Graph(data, "", "");
-        map.forEach((k, v)->{
-            if (!redisUtil.setKV(k, v)){
-                throw new Customer400Exception(StatusCode.REDIS_SET_ERROR.getCode(), StatusCode.REDIS_SET_ERROR.getMessage());
-            }
-        });
+        map.forEach(this::set);
         Map<String, String> res = new HashMap<>();
-        res.put(key, data.get(key).asText());
-        res.put(objectType, data.get(objectType).asText());
+        res.put(OBJECT_ID, data.get(OBJECT_ID).asText());
+        res.put(OBJECT_TYPE, data.get(OBJECT_TYPE).asText());
         return res;
     }
 
     private boolean hasEdge(String key){
         return redisUtil.getKeys(key) != null;
+    }
+
+    private void checkEtag(Object obj, String eTag){
+        if (eTag != null){
+            JsonNode json = JsonValidateUtil.str2JsonNode(obj.toString());
+            if (json.has("creationDate")){
+                String token = json.get("creationDate").asText();
+                if (eTag.equals(DigestUtils.md5DigestAsHex(token.getBytes()))){
+                    throw new Customer304Exception(StatusCode.NOT_MODIFIED.getCode(), StatusCode.NOT_MODIFIED.getMessage());
+                }
+            }
+        }
+    }
+
+    private void checkNode(JsonNode jsonNode){
+        if (!jsonNode.has(OBJECT_ID)){
+            throw new Customer400Exception(400, "Missing " + OBJECT_ID);
+        }
+        else if (!jsonNode.has(OBJECT_TYPE)){
+            throw new Customer400Exception(400, "Missing " + OBJECT_TYPE);
+        }
     }
 }
