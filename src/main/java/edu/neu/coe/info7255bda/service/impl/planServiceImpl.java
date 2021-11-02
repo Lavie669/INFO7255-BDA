@@ -1,6 +1,7 @@
 package edu.neu.coe.info7255bda.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -72,7 +73,7 @@ public class planServiceImpl implements PlanService {
     public Object getPlanByKey(String key) {
         Object obj = redisUtil.getByKey(key);
         if (obj == null){
-            throw new Customer400Exception(StatusCode.REDIS_GET_ERROR.getCode(), StatusCode.REDIS_GET_ERROR.getMessage());
+            throw new Customer400Exception(StatusCode.REDIS_GET_ERROR.getCode(), StatusCode.REDIS_GET_ERROR.getMessage()+ '-' + key);
         }
         if (obj instanceof String){
             if (JsonValidateUtil.isJson((String) obj)){
@@ -122,11 +123,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public Map<String, String> validateAndAddAsGraph(String strJson) {
-        Object obj = redisUtil.getByKey(SCHEMA);
-        if (obj == null){
-            throw new NullPointerException("Can't find json schema!");
-        }
-        JsonNode jsonSchema = JsonValidateUtil.str2JsonNode(JSON.toJSONString(obj));
+        JsonNode jsonSchema = getJsonSchemaByKey(SCHEMA);
 
         if (JsonValidateUtil.isValidated(jsonSchema, strJson)){
             JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
@@ -263,6 +260,9 @@ public class planServiceImpl implements PlanService {
         }
         else {
             String[] s = keys.split(",");
+            while (s[n].isEmpty()){
+                n += 1;
+            }
             redisUtil.setKV(key, keys.replace(s[n], ""));
             return "Deletion success";
         }
@@ -278,6 +278,7 @@ public class planServiceImpl implements PlanService {
     public String updatePlan(String key, String strJson) {
         JsonNode jsonNode = JsonValidateUtil.str2JsonNode(strJson);
         Set<String> keys = redisUtil.getKeys(key + "*");
+        JSONObject object =  JSON.parseObject(getPlanByKey(key).toString());
         Iterator<String> iterator = jsonNode.fieldNames();
         while (iterator.hasNext()){
             String fieldName = iterator.next();
@@ -299,11 +300,15 @@ public class planServiceImpl implements PlanService {
                     throw new Customer400Exception(400, "Nothing can be updated");
                 }
             }
-            else {// TODO: 2021/10/29  update for other properties of plan
+            else {
+                if (!fieldName.equals(OBJECT_TYPE) && !fieldName.equals(OBJECT_ID)){
+                    object.put(fieldName, node.asText());
+                }
             }
 
         }
-        return null;
+        setGraph(key, object);
+        return "Update success";
     }
 
     private void updateGraph(String edge, String edgeVal, JsonNode newData){
@@ -311,16 +316,16 @@ public class planServiceImpl implements PlanService {
         String ownKey = newData.get(OBJECT_TYPE).asText() + '_' + newData.get(OBJECT_ID).asText();
         if (!edgeVal.contains(ownKey)) {
             if (edgeVal.contains(",")){
-                set(edge, edgeVal + ',' + ownKey);
+                setGraph(edge, edgeVal + ',' + ownKey);
             }
             else {
-                set(edge, ownKey);
+                setGraph(edge, ownKey);
             }
         }
-        JsonUtil.convert2Graph(newData, "", "").forEach(this::set);
+        JsonUtil.convert2Graph(newData, "", "").forEach(this::setGraph);
     }
 
-    private void set(String k, Object v){
+    private void setGraph(String k, Object v){
         if (!redisUtil.setKV(k, v.toString())){
             throw new Customer400Exception(StatusCode.REDIS_SET_ERROR.getCode(), StatusCode.REDIS_SET_ERROR.getMessage());
         }
@@ -328,7 +333,7 @@ public class planServiceImpl implements PlanService {
 
     private Map<String, String> addAsGraph(JsonNode data){
         Map<String, String> map = JsonUtil.convert2Graph(data, "", "");
-        map.forEach(this::set);
+        map.forEach(this::setGraph);
         Map<String, String> res = new HashMap<>();
         res.put(OBJECT_ID, data.get(OBJECT_ID).asText());
         res.put(OBJECT_TYPE, data.get(OBJECT_TYPE).asText());
@@ -358,5 +363,13 @@ public class planServiceImpl implements PlanService {
         else if (!jsonNode.has(OBJECT_TYPE)){
             throw new Customer400Exception(400, "Missing " + OBJECT_TYPE);
         }
+    }
+
+    private JsonNode getJsonSchemaByKey(String key){
+        Object obj = redisUtil.getByKey(key);
+        if (obj == null){
+            throw new NullPointerException("Can't find json schema!");
+        }
+        return JsonValidateUtil.str2JsonNode(JSON.toJSONString(obj));
     }
 }
