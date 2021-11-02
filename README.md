@@ -1,4 +1,4 @@
-# INFO7255-BDA
+# INFO7255-BDA (developing...)
 Big Data Application
 1. Json simple for Json parsing
 2. Spring Boot for rest API development
