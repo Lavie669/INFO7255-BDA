@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("plan")
+@RequestMapping("/plan")
 public class PlanController {
 
     @Autowired
@@ -45,8 +45,8 @@ public class PlanController {
     }
 
     @PostMapping("/add/schema")
-    public ResultData<String> addPlanSchema(@RequestBody String strSchema){
-        return ResultData.success(planService.addSchema(strSchema));
+    public String addPlanSchema(@RequestBody String strSchema){
+        return planService.addSchema(strSchema);
     }
 
     @GetMapping("/get/schema")

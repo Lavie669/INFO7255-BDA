@@ -7,6 +7,8 @@ import edu.neu.coe.info7255bda.service.PlanService;
 import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
 import edu.neu.coe.info7255bda.utils.redis.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -39,7 +41,7 @@ public class TestController {
 
     @GetMapping("redis/getValue")
     public Object getValueByKey(@RequestBody String key){
-        return redisUtil.getByKey(key);
+        return ResultData.success(redisUtil.getByKey(key));
     }
 
     @DeleteMapping("redis/del")

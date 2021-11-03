@@ -16,6 +16,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class UniformExceptionHandler {
 
+    @ExceptionHandler(Customer401Exception.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResultData<String> JWTAuthorizationException(Customer401Exception e){
+        return ResultData.fail(401, e.getMessage());
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResultData<String> parameterBodyMissingException(HttpMessageNotReadableException e) {
