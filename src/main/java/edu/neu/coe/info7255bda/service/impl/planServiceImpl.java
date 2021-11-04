@@ -127,6 +127,10 @@ public class planServiceImpl implements PlanService {
 
         if (JsonValidateUtil.isValidated(jsonSchema, strJson)){
             JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
+            String key = jsonData.get(OBJECT_TYPE).asText() + "_" + jsonData.get(OBJECT_ID).asText();
+            if (redisUtil.getByKey(key)!=null){
+                throw new Customer400Exception(400, "Plan already existed");
+            }
             return addAsGraph(jsonData);
         }
         else {
@@ -205,14 +209,18 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public Object getGraphWithEtag(String key, String eTag) {
-        checkEtag(getPlanByKey(key), eTag);
+        if (!checkEtag(getPlanByKey(key), eTag)){
+            throw new Customer304Exception(StatusCode.NOT_MODIFIED.getCode(), StatusCode.NOT_MODIFIED.getMessage());
+        }
         return getGraphByKey(key);
     }
 
     @Override
     public Object getValueWithEtag(String key, String eTag) {
         Object obj = getPlanByKey(key);
-        checkEtag(obj, eTag);
+        if (!checkEtag(obj, eTag)){
+            throw new Customer304Exception(StatusCode.NOT_MODIFIED.getCode(), StatusCode.NOT_MODIFIED.getMessage());
+        }
         return obj;
     }
 
@@ -311,6 +319,37 @@ public class planServiceImpl implements PlanService {
         return "Update success";
     }
 
+    @Override
+    public String updatePlanWithEtag(String key, String strJson, String eTag) {
+        if (eTag!=null&&checkEtag(getPlanByKey(key), eTag)){
+            return null;
+        }
+        return updatePlan(key, strJson);
+    }
+
+    @Override
+    public String updateAllPlan(String key, String strJson) {
+        JsonNode jsonSchema = getJsonSchemaByKey(SCHEMA);
+
+        if (JsonValidateUtil.isValidated(jsonSchema, strJson)){
+            JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
+            addAsGraph(jsonData);
+            return "Update success";
+        }
+        else {
+            String result = JsonValidateUtil.validateJson(jsonSchema, strJson);
+            throw new Customer400Exception(StatusCode.JSON_SCHEMA_ERROR.getCode(), result);
+        }
+    }
+
+    @Override
+    public String updateAllPlanWithEtag(String key, String strJson, String eTag) {
+        if (eTag!=null&&checkEtag(getPlanByKey(key), eTag)){
+            return null;
+        }
+        return updateAllPlan(key, strJson);
+    }
+
     private void updateGraph(String edge, String edgeVal, JsonNode newData){
         checkNode(newData);
         String ownKey = newData.get(OBJECT_TYPE).asText() + '_' + newData.get(OBJECT_ID).asText();
@@ -344,16 +383,18 @@ public class planServiceImpl implements PlanService {
         return redisUtil.getKeys(key) != null;
     }
 
-    private void checkEtag(Object obj, String eTag){
+    private boolean checkEtag(Object obj, String eTag){
         if (eTag != null){
             JsonNode json = JsonValidateUtil.str2JsonNode(obj.toString());
             if (json.has("creationDate")){
                 String token = json.get("creationDate").asText();
                 if (eTag.equals(DigestUtils.md5DigestAsHex(token.getBytes()))){
-                    throw new Customer304Exception(StatusCode.NOT_MODIFIED.getCode(), StatusCode.NOT_MODIFIED.getMessage());
+                    return false;
                 }
+                return true;
             }
         }
+        return true;
     }
 
     private void checkNode(JsonNode jsonNode){

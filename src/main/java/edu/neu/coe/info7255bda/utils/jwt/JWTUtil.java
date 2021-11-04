@@ -5,12 +5,10 @@ import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import edu.neu.coe.info7255bda.model.VO.RSA256Key;
 import edu.neu.coe.info7255bda.utils.exception.Customer401Exception;
-import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -33,19 +31,50 @@ public class JWTUtil {
     private static volatile RSA256Key rsa256Key;
     private static final long EXPIRE_TIME = 30*60*1000;
 
+    @Value("${oauth-url}")
+    private String oauthUrl;
+
     @Value("${google.client-id}")
     private String clientID;
 
-    public boolean validateToken(String jwt) throws NoSuchAlgorithmException {
-        return verifierToken(jwt);
+    @Value(("${google.issuer}"))
+    private String issuer;
+
+    public boolean validateToken(String path, String jwt) throws ParseException, NoSuchAlgorithmException {
+        if (path.equals(oauthUrl)){
+            return validateGoogleToken(jwt);
+        }
+        else {
+            return validateMyToken(jwt) != null;
+        }
+    }
+
+    private boolean validateGoogleToken(String jwt){
+        try {
+            JWTClaimsSet claims = JWTParser.parse(jwt).getJWTClaimsSet();
+            if (claims.getExpirationTime().compareTo(new Date()) < 0){
+                log.error("Token has expired!!!");
+                return false;
+            }
+            if (!claims.getIssuer().equals(issuer)){
+                log.error("Invalid issuer");
+                return false;
+            }
+            if (!claims.getAudience().contains(clientID)){
+                log.error("Invalid client_id!!!");
+                return false;
+            }
+            return true;
+        }catch (ParseException e){
+            log.error("Invalid token!!!");
+            return false;
+        }
     }
 
     public static RSA256Key generateRSA256Key() throws NoSuchAlgorithmException {
         if (rsa256Key == null) {
-            //密钥生成所需的随机数源
             KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
             keyPairGen.initialize(KEY_SIZE);
-            //通过KeyPairGenerator生成密匙对KeyPair
             KeyPair keyPair = keyPairGen.generateKeyPair();
             RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
             RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
@@ -56,35 +85,29 @@ public class JWTUtil {
         return rsa256Key;
     }
 
-    public String creatTokenByRS256(String clientId) throws NoSuchAlgorithmException {
-        if (!clientId.equals(clientID)){
-            throw new Customer401Exception("Invalid client_id!!!");
-        }
+    public String creatTokenByRS256() throws NoSuchAlgorithmException {
         RSA256Key rsa256Key = generateRSA256Key();
         Algorithm algorithm = Algorithm.RSA256(rsa256Key.getPublicKey(), rsa256Key.getPrivateKey());
         return JWT.create()
                 .withIssuer(ISSUER)
-                .withAudience(clientId)
+                .withAudience(clientID)
                 .withIssuedAt(new Date())
                 .withExpiresAt(new Date(System.currentTimeMillis()+ EXPIRE_TIME))
                 .sign(algorithm);
     }
 
-    private boolean verifierToken(String token) throws NoSuchAlgorithmException {
+    private DecodedJWT validateMyToken(String token) throws NoSuchAlgorithmException {
         RSA256Key rsa256Key = generateRSA256Key();
-
-        Algorithm algorithm = Algorithm.RSA256(rsa256Key.getPublicKey(), null);
-
+        Algorithm algorithm = Algorithm.RSA256(rsa256Key.getPublicKey(), rsa256Key.getPrivateKey());
         JWTVerifier verifier = JWT.require(algorithm)
                 .withIssuer(ISSUER)
                 .build();
 
         try {
-            DecodedJWT jwt = verifier.verify(token);
-            return true;
+            return verifier.verify(token);
         }catch (JWTVerificationException e){
             log.error("Invalid token! " + e.getMessage());
-            return false;
+            return null;
         }
     }
 }

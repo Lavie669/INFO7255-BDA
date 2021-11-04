@@ -42,4 +42,10 @@ public interface PlanService {
     Map<String, String> addOtherPlan(String strJson);
 
     String updatePlan(String key, String strJson);
+
+    String updatePlanWithEtag(String key, String strJson, String eTag);
+
+    String updateAllPlan(String key, String strJson);
+
+    String updateAllPlanWithEtag(String key, String strJson, String eTag);
 }

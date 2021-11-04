@@ -45,8 +45,8 @@ public class PlanController {
     }
 
     @PostMapping("/add/schema")
-    public String addPlanSchema(@RequestBody String strSchema){
-        return planService.addSchema(strSchema);
+    public Object addPlanSchema(@RequestBody String strSchema){
+        return ResultData.success(planService.addSchema(strSchema));
     }
 
     @GetMapping("/get/schema")
@@ -95,8 +95,31 @@ public class PlanController {
 
     @PatchMapping("/update/{type}/{id}")
     public ResultData<String> updatePlan(@PathVariable("type") String objType, @PathVariable("id") String objID,
-                                         @RequestBody String strJson){
-        return ResultData.success(planService.updatePlan(objType + '_' + objID, strJson));
+                                         @RequestBody String strJson, HttpServletRequest request, HttpServletResponse response){
+        String previousToken = request.getHeader("If-None-Match");
+        String res = planService.updatePlanWithEtag(objType + '_' + objID, strJson, previousToken);
+        if (res == null){
+            response.setStatus(HttpServletResponse.SC_PRECONDITION_FAILED);
+            return ResultData.fail(HttpServletResponse.SC_PRECONDITION_FAILED, "Precondition Failed");
+        }
+        String plan = planService.getPlanByKey(objType + '_' + objID).toString();
+        String token = '"' + DigestUtils.md5DigestAsHex(JsonValidateUtil.str2JsonNode(plan).get("creationDate").asText().getBytes()) + '"';
+        response.addHeader("ETag", token);
+        return ResultData.success(res);
+    }
+
+    @PutMapping("/update/{type}/{id}")
+    public ResultData<String> updateAllPlan(@PathVariable("type") String objType, @PathVariable("id") String objID,
+                                         @RequestBody String strJson, HttpServletRequest request, HttpServletResponse response){
+        String previousToken = request.getHeader("If-None-Match");
+        String token = '"' + DigestUtils.md5DigestAsHex(JsonValidateUtil.str2JsonNode(strJson).get("creationDate").asText().getBytes()) + '"';
+        response.addHeader("ETag", token);
+        String res = planService.updateAllPlanWithEtag(objType + '_' + objID, strJson, previousToken);
+        if (res == null){
+            response.setStatus(HttpServletResponse.SC_PRECONDITION_FAILED);
+            return ResultData.fail(HttpServletResponse.SC_PRECONDITION_FAILED, "Precondition Failed");
+        }
+        return ResultData.success(res);
     }
 
     @PostMapping("/json/validate")

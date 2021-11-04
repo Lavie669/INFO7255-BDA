@@ -1,6 +1,5 @@
 package edu.neu.coe.info7255bda.filter;
 
-import edu.neu.coe.info7255bda.model.VO.RSA256Key;
 import edu.neu.coe.info7255bda.utils.jwt.JWTUtil;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +26,8 @@ public class JWTFilter extends OncePerRequestFilter {
     @SneakyThrows
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain){
-        if (excludeUrl.contains(request.getServletPath())){
+        String path = request.getServletPath();
+        if (excludeUrl.contains(path)){
             filterChain.doFilter(request, response);
         }
         log.info("Checking JWT...");
@@ -35,10 +35,10 @@ public class JWTFilter extends OncePerRequestFilter {
         String auth = request.getHeader("Authorization");
         if ((auth != null) && (auth.length() > 7)){
             String HeadStr = auth.substring(0, 6).toLowerCase();
-            if (HeadStr.compareTo("bearer") == 0)
-            {
+            if (HeadStr.compareTo("bearer") == 0) {
                 String jwt = auth.substring(7);
-                if (jwtUtil.validateToken(jwt)){
+                if (jwtUtil.validateToken(path, jwt)){
+                    log.info("Authorization success!!!");
                     response.setStatus(HttpServletResponse.SC_OK);
                     filterChain.doFilter(request, response);
                 }

@@ -15,7 +15,7 @@ public class OauthController {
 
     @SneakyThrows
     @PostMapping("/token")
-    public Object getOauthToken(@RequestBody String clientId){
-        return ResultData.success(jwtUtil.creatTokenByRS256(clientId));
+    public Object getOauthToken(){
+        return ResultData.success(jwtUtil.creatTokenByRS256());
     }
 }

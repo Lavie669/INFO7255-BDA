@@ -3,29 +3,13 @@ package edu.neu.coe.info7255bda.utils.json;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
-import com.nimbusds.jwt.SignedJWT;
-import com.sun.mail.util.BASE64EncoderStream;
 import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
-import edu.neu.coe.info7255bda.utils.redis.RedisUtil;
-import org.apache.tomcat.util.codec.binary.Base64;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.DigestUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.security.*;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
 @Component
@@ -102,10 +86,8 @@ public class JsonUtil {
     }
 
     public static void main(String[] args) throws Exception {
-        String pkS = readFromFile(DIR_PREFIX+"/key.public").replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "").replace("\n", "");
         String token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg1ODI4YzU5Mjg0YTY5YjU0YjI3NDgzZTQ4N2MzYmQ0NmNkMmEyYjMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDI0MTA3ODM5NTEwLTJqNTd1MDRnazMzYWQ0bHJvMDFnaDk0b245N2NvZ3A4LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTAyNDEwNzgzOTUxMC0yajU3dTA0Z2szM2FkNGxybzAxZ2g5NG9uOTdjb2dwOC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExMzE3NzQ2MzQ4MjkzNDcyMjY3NCIsImF0X2hhc2giOiJXYk5OelFhbkw4cDY3dG5ucV90TVFBIiwiaWF0IjoxNjM1OTU2NjE1LCJleHAiOjE2MzU5NjAyMTV9.UxpfYK0Mpi7b62pC9BEoCV3C07yzG6GEjBB5R35m6y2fGMBpzasU8ACcB7myNpESjWv2x_v_4SkXhEdZV7lRuZuHBhoeGwTgpbzzU4kR05WbglQhCz2AUqjP_ZHe7H_ShiQxtBMrY1nUNzQEgmG490Gb1NLaMVJp3ZFMSLgh6r58ANrK2m-gxWQ6dPLdCzkoHBghi-LAU6iQM0ZtZtuubFYVSsUInlQ1E0GVu1bKFmtDde_-35v2Uz7TK_1hNrRwUCFDCOB1IFZ-LJlnInVc7DPrPRdhAkcVHDgpNgFZumEpu6-bRGUb0sgoUAqLmd8Y0zREsj1Pv1eydsG8u87c8Q";
-        SignedJWT sjwt = SignedJWT.parse(token);
-        System.out.println(Arrays.toString(sjwt.getParsedParts()));
+        JWTClaimsSet claims = JWTParser.parse(token).getJWTClaimsSet();
+        System.out.println(claims.getAudience());
     }
 }
