@@ -30,7 +30,6 @@ public class JWTFilter extends OncePerRequestFilter {
         if (excludeUrl.contains(path)){
             filterChain.doFilter(request, response);
         }
-        log.info("Checking JWT...");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         String auth = request.getHeader("Authorization");
         if ((auth != null) && (auth.length() > 7)){
@@ -40,9 +39,20 @@ public class JWTFilter extends OncePerRequestFilter {
                 if (jwtUtil.validateToken(path, jwt)){
                     log.info("Authorization success!!!");
                     response.setStatus(HttpServletResponse.SC_OK);
+                    if (!checkIfMatch(request)){
+                        response.sendError(HttpServletResponse.SC_PRECONDITION_FAILED);
+                    }
                     filterChain.doFilter(request, response);
                 }
             }
         }
+    }
+
+    private boolean checkIfMatch(HttpServletRequest request){
+        String method = request.getMethod().toUpperCase();
+        if (method.equals("PUT") || method.equals("PATCH")){
+            return request.getHeader("If-Match") != null;
+        }
+        return true;
     }
 }

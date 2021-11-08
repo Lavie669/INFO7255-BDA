@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,6 +53,16 @@ public class TestController {
         else {
             throw new Customer400Exception(StatusCode.REDIS_DEL_ERROR.getCode(), StatusCode.REDIS_DEL_ERROR.getMessage());
         }
+    }
+
+    @PostMapping("/json/validate")
+    public ResultData<String> validate(@RequestBody String strJson){
+        return ResultData.success(planService.validatePlan(strJson));
+    }
+
+    @PostMapping("/json/findmissing")
+    public List<String> findMissing(@RequestBody String strJson){
+        return planService.findMissAtPlan(strJson);
     }
 
 }

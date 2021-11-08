@@ -1,15 +1,26 @@
 package edu.neu.coe.info7255bda.utils.json;
 
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.interfaces.RSAKeyProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.time.Duration;
 import java.util.*;
 
 @Component
@@ -36,6 +47,10 @@ public class JsonUtil {
             e.printStackTrace();
         }
         return sb.toString();
+    }
+
+    public static JsonNode readFromFileToJson(String filePath){
+        return JsonValidateUtil.str2JsonNode(readFromFile(filePath));
     }
 
     public static Map<String, String> convert2Graph(JsonNode jsonData, String key, String fieldName){
@@ -86,8 +101,14 @@ public class JsonUtil {
     }
 
     public static void main(String[] args) throws Exception {
-        String token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg1ODI4YzU5Mjg0YTY5YjU0YjI3NDgzZTQ4N2MzYmQ0NmNkMmEyYjMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDI0MTA3ODM5NTEwLTJqNTd1MDRnazMzYWQ0bHJvMDFnaDk0b245N2NvZ3A4LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTAyNDEwNzgzOTUxMC0yajU3dTA0Z2szM2FkNGxybzAxZ2g5NG9uOTdjb2dwOC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExMzE3NzQ2MzQ4MjkzNDcyMjY3NCIsImF0X2hhc2giOiJXYk5OelFhbkw4cDY3dG5ucV90TVFBIiwiaWF0IjoxNjM1OTU2NjE1LCJleHAiOjE2MzU5NjAyMTV9.UxpfYK0Mpi7b62pC9BEoCV3C07yzG6GEjBB5R35m6y2fGMBpzasU8ACcB7myNpESjWv2x_v_4SkXhEdZV7lRuZuHBhoeGwTgpbzzU4kR05WbglQhCz2AUqjP_ZHe7H_ShiQxtBMrY1nUNzQEgmG490Gb1NLaMVJp3ZFMSLgh6r58ANrK2m-gxWQ6dPLdCzkoHBghi-LAU6iQM0ZtZtuubFYVSsUInlQ1E0GVu1bKFmtDde_-35v2Uz7TK_1hNrRwUCFDCOB1IFZ-LJlnInVc7DPrPRdhAkcVHDgpNgFZumEpu6-bRGUb0sgoUAqLmd8Y0zREsj1Pv1eydsG8u87c8Q";
-        JWTClaimsSet claims = JWTParser.parse(token).getJWTClaimsSet();
-        System.out.println(claims.getAudience());
+        String token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjI3YzcyNjE5ZDA5MzVhMjkwYzQxYzNmMDEwMTY3MTM4Njg1ZjdlNTMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDI0MTA3ODM5NTEwLTJqNTd1MDRnazMzYWQ0bHJvMDFnaDk0b245N2NvZ3A4LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTAyNDEwNzgzOTUxMC0yajU3dTA0Z2szM2FkNGxybzAxZ2g5NG9uOTdjb2dwOC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExMzE3NzQ2MzQ4MjkzNDcyMjY3NCIsImF0X2hhc2giOiJoeEtuc3hhQ2ppajkxLUJTamx4Q1F3IiwiaWF0IjoxNjM2MTc5NDY4LCJleHAiOjE2MzYxODMwNjh9.FmpZDrGRCv2rmZFRlymq4XSEwmleaugl8HcjmISCo5HfJvBhYwwZhhw8pxYStDUb8lGlAhv0k5y1qHuZdiEGHIXZr4jZtF8EAslbU_0jWlAMc09BHWrm8mTu0V3VWTgBcT5JYDGZezJaO7G4-B7RGcCtEEPjrlKcQcGWvVHfjkhuP1YLBYTqmmPtixzZg6YwTOYE65stCFXLyuUbJAHQnEQky2zMloFAMGra7p7CPIe9I9VKJ-M8yY3aPJZCycqT9ccRSRJp2QZ5lR7pY05v7LnKSQiizRar5MPx6tZX_A8g8qlxm-OO1uw-1_sSmSNZYuxP54OZEbrOqfnCNTrGKg";
+        JsonNode jsonNode = JsonValidateUtil.str2JsonNode(readFromFile(DIR_PREFIX+"/public.crt"));
+        String pk = jsonNode.get("27c72619d0935a290c41c3f010167138685f7e53").asText();
+        InputStream in = new ByteArrayInputStream(pk.getBytes());
+        CertificateFactory f = CertificateFactory.getInstance("X.509");
+        X509Certificate certificate = (X509Certificate)f.generateCertificate(in);
+        PublicKey publicKey = certificate.getPublicKey();
+        NimbusJwtDecoder otherJwtDecoder = NimbusJwtDecoder.withPublicKey((RSAPublicKey) publicKey).build();
+        System.out.println(otherJwtDecoder.decode(token));
     }
 }

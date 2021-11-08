@@ -38,6 +38,9 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         else if (body.toString().contains("status=401, error=Unauthorized")){
             return ResultData.fail(401, "Unauthorized");
         }
+        else if (body.toString().contains("status=412, error=Precondition Failed")){
+            return ResultData.fail(412, "Precondition Failed");
+        }
         return ResultData.success(body);
     }
 }

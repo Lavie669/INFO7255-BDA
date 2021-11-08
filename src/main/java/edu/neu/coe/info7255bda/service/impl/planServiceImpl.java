@@ -141,6 +141,9 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String addSchema(String strSchema) {
+        if (redisUtil.getByKey(SCHEMA)!=null){
+            throw new Customer400Exception(400, "Plan schema already existed");
+        }
         JsonNode schema = JsonValidateUtil.str2JsonNode(strSchema);
         if (redisUtil.setKV(SCHEMA, schema)){
             return "Successfully set plan schema!";
