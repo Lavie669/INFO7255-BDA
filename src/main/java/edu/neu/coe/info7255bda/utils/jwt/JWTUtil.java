@@ -8,6 +8,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import edu.neu.coe.info7255bda.constant.Constant;
 import edu.neu.coe.info7255bda.model.VO.RSA256Key;
 import edu.neu.coe.info7255bda.utils.exception.Customer401Exception;
 import edu.neu.coe.info7255bda.utils.json.JsonUtil;
@@ -38,13 +39,12 @@ import java.util.UUID;
 @Component
 public class JWTUtil {
 
-    public static final String DIR_PREFIX = "./src/main/resources";
-    public static final String GOOGLE_CERT = "/public.crt";
+    private static final String GOOGLE_CERT = "/public.crt";
 
-    public static final String KEY_ALGORITHM = "RSA";
+    private static final String KEY_ALGORITHM = "RSA";
     private static final String ISSUER = "info7255bda";
     private static volatile RSA256Key rsa256Key;
-    public static final int KEY_SIZE = 2048;
+    private static final int KEY_SIZE = 2048;
     private static final long EXPIRE_TIME = 30*60*1000;
 
     @Value("${oauth-url}")
@@ -98,7 +98,7 @@ public class JWTUtil {
     }
 
     private NimbusJwtDecoder generateDecoderById(String kid) throws CertificateException {
-        JsonNode jsonNode = JsonUtil.readFromFileToJson(DIR_PREFIX+GOOGLE_CERT);
+        JsonNode jsonNode = JsonUtil.readFromFileToJson(Constant.DIR_PREFIX + GOOGLE_CERT);
         if (!jsonNode.has(kid)){
             return null;
         }

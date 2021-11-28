@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.neu.coe.info7255bda.constant.Constant;
 import edu.neu.coe.info7255bda.constant.StatusCode;
 import edu.neu.coe.info7255bda.model.VO.ResultData;
 import edu.neu.coe.info7255bda.service.PlanService;
@@ -25,21 +26,15 @@ import java.util.*;
 @Slf4j
 public class planServiceImpl implements PlanService {
 
-    public static final String DIR_PREFIX = "./src/main/resources";
-    private final static String PLAN_SCHEMA_FILE_PATH = DIR_PREFIX + "/json/schema/PlanSchema.json";
-    private final static String OBJECT_ID = "objectId";
-    private final static String OBJECT_TYPE = "objectType";
-    private final static String SCHEMA = "planSchema";
-
     @Autowired
     private RedisUtil redisUtil;
 
     @Override
     public Map<String, String> addByJson(JsonNode jsonData) {
-        if (redisUtil.setKV(jsonData.get(OBJECT_ID).asText(), jsonData)){
+        if (redisUtil.setKV(jsonData.get(Constant.OBJECT_ID).asText(), jsonData)){
             Map<String, String> res = new HashMap<>();
-            res.put(OBJECT_ID, jsonData.get(OBJECT_ID).asText());
-            res.put(OBJECT_TYPE, jsonData.get(OBJECT_TYPE).asText());
+            res.put(Constant.OBJECT_ID, jsonData.get(Constant.OBJECT_ID).asText());
+            res.put(Constant.OBJECT_TYPE, jsonData.get(Constant.OBJECT_TYPE).asText());
             return res;
         }
         else {
@@ -49,7 +44,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String addByMap(Map<String, Object> map) {
-        if (redisUtil.setKV(map.get(OBJECT_ID).toString(), map)){
+        if (redisUtil.setKV(map.get(Constant.OBJECT_ID).toString(), map)){
             return "Successfully set key/value";
         }
         else {
@@ -59,12 +54,12 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public Map<String, String> validateAndAdd(String strJson) {
-        if (JsonValidateUtil.isValidated(PLAN_SCHEMA_FILE_PATH, strJson)){
+        if (JsonValidateUtil.isValidated(Constant.PLAN_SCHEMA_FILE_PATH, strJson)){
             JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
             return addByJson(jsonData);
         }
         else {
-            String result = JsonValidateUtil.validateJson(JsonValidateUtil.str2JsonNode(PLAN_SCHEMA_FILE_PATH), strJson);
+            String result = JsonValidateUtil.validateJson(JsonValidateUtil.str2JsonNode(Constant.PLAN_SCHEMA_FILE_PATH), strJson);
             throw new Customer400Exception(StatusCode.JSON_SCHEMA_ERROR.getCode(), result);
         }
     }
@@ -98,7 +93,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String validatePlan(String strJson) {
-        if (JsonValidateUtil.isValidated(PLAN_SCHEMA_FILE_PATH, strJson)){
+        if (JsonValidateUtil.isValidated(Constant.PLAN_SCHEMA_FILE_PATH, strJson)){
             return "No error found";
         }
         else {
@@ -108,12 +103,12 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public List<String> findMissAtPlan(String strJson) {
-        return JsonValidateUtil.findMissingProperties(PLAN_SCHEMA_FILE_PATH, strJson);
+        return JsonValidateUtil.findMissingProperties(Constant.PLAN_SCHEMA_FILE_PATH, strJson);
     }
 
     @Override
     public JsonNode getSchema() {
-        return getJsonPlanByKey(SCHEMA);
+        return getJsonPlanByKey(Constant.SCHEMA);
     }
 
     private JsonNode getJsonPlanByKey(String key) {
@@ -123,11 +118,11 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public Map<String, String> validateAndAddAsGraph(String strJson) {
-        JsonNode jsonSchema = getJsonSchemaByKey(SCHEMA);
+        JsonNode jsonSchema = getJsonSchemaByKey(Constant.SCHEMA);
 
         if (JsonValidateUtil.isValidated(jsonSchema, strJson)){
             JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
-            String key = jsonData.get(OBJECT_TYPE).asText() + "_" + jsonData.get(OBJECT_ID).asText();
+            String key = jsonData.get(Constant.OBJECT_TYPE).asText() + "_" + jsonData.get(Constant.OBJECT_ID).asText();
             if (redisUtil.getByKey(key)!=null){
                 throw new Customer400Exception(400, "Plan already existed");
             }
@@ -141,11 +136,11 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String addSchema(String strSchema) {
-        if (redisUtil.getByKey(SCHEMA)!=null){
+        if (redisUtil.getByKey(Constant.SCHEMA)!=null){
             throw new Customer400Exception(400, "Plan schema already existed");
         }
         JsonNode schema = JsonValidateUtil.str2JsonNode(strSchema);
-        if (redisUtil.setKV(SCHEMA, schema)){
+        if (redisUtil.setKV(Constant.SCHEMA, schema)){
             return "Successfully set plan schema!";
         }
         else {
@@ -312,7 +307,7 @@ public class planServiceImpl implements PlanService {
                 }
             }
             else {
-                if (!fieldName.equals(OBJECT_TYPE) && !fieldName.equals(OBJECT_ID)){
+                if (!fieldName.equals(Constant.OBJECT_TYPE) && !fieldName.equals(Constant.OBJECT_ID)){
                     object.put(fieldName, node.asText());
                 }
             }
@@ -332,7 +327,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String updateAllPlan(String key, String strJson) {
-        JsonNode jsonSchema = getJsonSchemaByKey(SCHEMA);
+        JsonNode jsonSchema = getJsonSchemaByKey(Constant.SCHEMA);
 
         if (JsonValidateUtil.isValidated(jsonSchema, strJson)){
             JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
@@ -355,7 +350,7 @@ public class planServiceImpl implements PlanService {
 
     private void updateGraph(String edge, String edgeVal, JsonNode newData){
         checkNode(newData);
-        String ownKey = newData.get(OBJECT_TYPE).asText() + '_' + newData.get(OBJECT_ID).asText();
+        String ownKey = newData.get(Constant.OBJECT_TYPE).asText() + '_' + newData.get(Constant.OBJECT_ID).asText();
         if (!edgeVal.contains(ownKey)) {
             if (edgeVal.contains(",")){
                 setGraph(edge, edgeVal + ',' + ownKey);
@@ -377,8 +372,8 @@ public class planServiceImpl implements PlanService {
         Map<String, String> map = JsonUtil.convert2Graph(data, "", "");
         map.forEach(this::setGraph);
         Map<String, String> res = new HashMap<>();
-        res.put(OBJECT_ID, data.get(OBJECT_ID).asText());
-        res.put(OBJECT_TYPE, data.get(OBJECT_TYPE).asText());
+        res.put(Constant.OBJECT_ID, data.get(Constant.OBJECT_ID).asText());
+        res.put(Constant.OBJECT_TYPE, data.get(Constant.OBJECT_TYPE).asText());
         return res;
     }
 
@@ -401,11 +396,11 @@ public class planServiceImpl implements PlanService {
     }
 
     private void checkNode(JsonNode jsonNode){
-        if (!jsonNode.has(OBJECT_ID)){
-            throw new Customer400Exception(400, "Missing " + OBJECT_ID);
+        if (!jsonNode.has(Constant.OBJECT_ID)){
+            throw new Customer400Exception(400, "Missing " + Constant.OBJECT_ID);
         }
-        else if (!jsonNode.has(OBJECT_TYPE)){
-            throw new Customer400Exception(400, "Missing " + OBJECT_TYPE);
+        else if (!jsonNode.has(Constant.OBJECT_TYPE)){
+            throw new Customer400Exception(400, "Missing " + Constant.OBJECT_TYPE);
         }
     }
 

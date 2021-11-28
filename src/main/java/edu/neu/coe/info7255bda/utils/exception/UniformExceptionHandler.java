@@ -4,6 +4,7 @@ package edu.neu.coe.info7255bda.utils.exception;
 import edu.neu.coe.info7255bda.constant.StatusCode;
 import edu.neu.coe.info7255bda.model.VO.ResultData;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.ElasticsearchStatusException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -15,6 +16,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class UniformExceptionHandler {
+
+    @ExceptionHandler(ElasticsearchStatusException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResultData<String> ESStatusException(ElasticsearchStatusException e){
+        return ResultData.fail(400, e.getMessage());
+    }
 
     @ExceptionHandler(Customer401Exception.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)

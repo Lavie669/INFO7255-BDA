@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import edu.neu.coe.info7255bda.constant.Constant;
 import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -25,12 +26,6 @@ import java.util.*;
 
 @Component
 public class JsonUtil {
-
-    public static final String DIR_PREFIX = "./src/main/resources";
-    private final static String testJson1 = DIR_PREFIX + "/json/testPlanJson1.json";
-    private final static String testJson2 = DIR_PREFIX + "/json/testPlanJson2.json";
-    private final static String OBJECT_ID = "objectId";
-    private final static String OBJECT_TYPE = "objectType";
 
     public static String readFromFile(String filePath){
         StringBuilder sb = new StringBuilder();
@@ -56,7 +51,7 @@ public class JsonUtil {
     public static Map<String, String> convert2Graph(JsonNode jsonData, String key, String fieldName){
         checkNode(jsonData);
         Map<String, String> map = new HashMap<>();
-        String ownKey = jsonData.get(OBJECT_TYPE).asText() + '_' + jsonData.get(OBJECT_ID).asText();
+        String ownKey = jsonData.get(Constant.OBJECT_TYPE).asText() + '_' + jsonData.get(Constant.OBJECT_ID).asText();
         if (!key.isEmpty()&&!fieldName.isEmpty()){
             map.put(key+'_'+fieldName, ownKey);
         }
@@ -92,23 +87,31 @@ public class JsonUtil {
     }
 
     private static void checkNode(JsonNode jsonNode){
-        if (!jsonNode.has(OBJECT_ID)){
-            throw new Customer400Exception(400, "Missing " + OBJECT_ID);
+        if (!jsonNode.has(Constant.OBJECT_ID)){
+            throw new Customer400Exception(400, "Missing " + Constant.OBJECT_ID);
         }
-        else if (!jsonNode.has(OBJECT_TYPE)){
-            throw new Customer400Exception(400, "Missing " + OBJECT_TYPE);
+        else if (!jsonNode.has(Constant.OBJECT_TYPE)){
+            throw new Customer400Exception(400, "Missing " + Constant.OBJECT_TYPE);
         }
     }
 
     public static void main(String[] args) throws Exception {
-        String token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjI3YzcyNjE5ZDA5MzVhMjkwYzQxYzNmMDEwMTY3MTM4Njg1ZjdlNTMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDI0MTA3ODM5NTEwLTJqNTd1MDRnazMzYWQ0bHJvMDFnaDk0b245N2NvZ3A4LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTAyNDEwNzgzOTUxMC0yajU3dTA0Z2szM2FkNGxybzAxZ2g5NG9uOTdjb2dwOC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExMzE3NzQ2MzQ4MjkzNDcyMjY3NCIsImF0X2hhc2giOiJoeEtuc3hhQ2ppajkxLUJTamx4Q1F3IiwiaWF0IjoxNjM2MTc5NDY4LCJleHAiOjE2MzYxODMwNjh9.FmpZDrGRCv2rmZFRlymq4XSEwmleaugl8HcjmISCo5HfJvBhYwwZhhw8pxYStDUb8lGlAhv0k5y1qHuZdiEGHIXZr4jZtF8EAslbU_0jWlAMc09BHWrm8mTu0V3VWTgBcT5JYDGZezJaO7G4-B7RGcCtEEPjrlKcQcGWvVHfjkhuP1YLBYTqmmPtixzZg6YwTOYE65stCFXLyuUbJAHQnEQky2zMloFAMGra7p7CPIe9I9VKJ-M8yY3aPJZCycqT9ccRSRJp2QZ5lR7pY05v7LnKSQiizRar5MPx6tZX_A8g8qlxm-OO1uw-1_sSmSNZYuxP54OZEbrOqfnCNTrGKg";
-        JsonNode jsonNode = JsonValidateUtil.str2JsonNode(readFromFile(DIR_PREFIX+"/public.crt"));
-        String pk = jsonNode.get("27c72619d0935a290c41c3f010167138685f7e53").asText();
-        InputStream in = new ByteArrayInputStream(pk.getBytes());
-        CertificateFactory f = CertificateFactory.getInstance("X.509");
-        X509Certificate certificate = (X509Certificate)f.generateCertificate(in);
-        PublicKey publicKey = certificate.getPublicKey();
-        NimbusJwtDecoder otherJwtDecoder = NimbusJwtDecoder.withPublicKey((RSAPublicKey) publicKey).build();
-        System.out.println(otherJwtDecoder.decode(token));
+        String strJson = "{\n" +
+                "\t\"planCostShares\": {\n" +
+                "\t\t\"deductible\": 2000,\n" +
+                "\t\t\"_org\": \"example.com\",\n" +
+                "\t\t\"copay\": 23,\n" +
+                "\t\t\"objectId\": \"1234vxc2324sdf-501\",\n" +
+                "\t\t\"objectType\": \"membercostshare\"\n" +
+                "\t\t\n" +
+                "\t},\n" +
+                "\t\"_org\": \"example.com\",\n" +
+                "\t\"objectId\": \"12xvxc345ssdsds-508\",\n" +
+                "\t\"objectType\": \"plan\",\n" +
+                "\t\"planType\": \"inNetwork\",\n" +
+                "\t\"creationDate\": \"12-12-2017\"\n" +
+                "}";
+        JsonNode  jsonNode = JsonValidateUtil.str2JsonNode(strJson);
+        System.out.println(convert2Graph(jsonNode, "", ""));
     }
 }

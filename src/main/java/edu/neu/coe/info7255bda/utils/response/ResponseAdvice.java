@@ -5,6 +5,7 @@ import edu.neu.coe.info7255bda.model.VO.ResultData;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
@@ -30,6 +31,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return objectMapper.writeValueAsString(ResultData.success(body));
         }
         if (body instanceof ResultData){
+            response.setStatusCode(HttpStatus.valueOf(((ResultData<?>) body).getStatusCode()));
             return body;
         }
         if (body.toString().contains("status=404, error=Not Found")){

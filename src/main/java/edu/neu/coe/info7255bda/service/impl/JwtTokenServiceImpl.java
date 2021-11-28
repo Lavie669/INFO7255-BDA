@@ -21,8 +21,6 @@ public class JwtTokenServiceImpl implements JwtTokenService {
     @Value("${oauth-url}")
     private String oauthUrl;
 
-
-
     @SneakyThrows
     @Override
     public boolean validateToken(String path, String jwt) {
