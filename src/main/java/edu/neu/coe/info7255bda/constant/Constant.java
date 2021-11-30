@@ -19,4 +19,10 @@ public class Constant {
 
     public static final String LINKED_PREFIX = "linked_";
     public static final String LINKED_PROP = "membercostshare";
+    public static final String BASIC_PROP = "plan";
+    public static final String ROUTING_PROP = "_routing";
+
+    public static final String ES_INDEX_QUEUE = "ESIndexingQueue";
+    public static final String ES_UPDATE_QUEUE = "ESUpdateQueue";
+    public static final String ES_DELETE_QUEUE = "ESDeleteQueue";
 }

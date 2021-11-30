@@ -14,6 +14,7 @@ import edu.neu.coe.info7255bda.utils.exception.Customer304Exception;
 import edu.neu.coe.info7255bda.utils.exception.Customer400Exception;
 import edu.neu.coe.info7255bda.utils.json.JsonUtil;
 import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
+import edu.neu.coe.info7255bda.utils.rabbit.RabbitUtil;
 import edu.neu.coe.info7255bda.utils.redis.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,9 @@ public class planServiceImpl implements PlanService {
 
     @Autowired
     private RedisUtil redisUtil;
+
+    @Autowired
+    private RabbitUtil rabbitUtil;
 
     @Override
     public Map<String, String> addByJson(JsonNode jsonData) {
@@ -126,6 +130,8 @@ public class planServiceImpl implements PlanService {
             if (redisUtil.getByKey(key)!=null){
                 throw new Customer400Exception(400, "Plan already existed");
             }
+            // send to queue for ES indexing
+            rabbitUtil.sendDirectMessage(Constant.ES_INDEX_QUEUE, strJson);
             return addAsGraph(jsonData);
         }
         else {
@@ -233,10 +239,12 @@ public class planServiceImpl implements PlanService {
         }
         else {
             for (String s : keys){
-              if (!s.equals(key)){
-                  delPlanByKey(s);
-              }
+//              if (!s.equals(key)){
+//                  delPlanByKey(s);
+//              }
+                delPlanByKey(s);
             }
+            rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, key);
             return "Deletion success";
         }
     }
@@ -244,10 +252,12 @@ public class planServiceImpl implements PlanService {
     @Override
     public String delEdgeByKey(String key) {
         String newS = "";
-        if (redisUtil.getByKey(key).toString().contains(",")){
+        String edge = redisUtil.getByKey(key).toString();
+        if (edge.contains(",")){
             newS += ',';
         }
         if (redisUtil.setKV(key, newS)){
+            rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, edge);
             return "Deletion success";
         }
         else {
@@ -266,8 +276,14 @@ public class planServiceImpl implements PlanService {
         }
         else {
             String[] s = keys.split(",");
-            while (s[n].isEmpty()){
-                n += 1;
+            if (s.length > n){
+                while (s[n].isEmpty()){
+                    n += 1;
+                }
+                rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, s[n]);
+            }
+            else {
+                throw new Customer400Exception(400, "Nothing can be deleted!");
             }
             redisUtil.setKV(key, keys.replace(s[n], ""));
             return "Deletion success";
@@ -314,6 +330,10 @@ public class planServiceImpl implements PlanService {
 
         }
         setGraph(key, object);
+        // send to queue for ES updating
+        Map<String, String> map = new HashMap<>();
+        map.put(key.split(Constant.SPLIT)[1], strJson);
+        rabbitUtil.sendDirectMessage(Constant.ES_UPDATE_QUEUE, map);
         return "Update success";
     }
 
@@ -332,6 +352,10 @@ public class planServiceImpl implements PlanService {
         if (JsonValidateUtil.isValidated(jsonSchema, strJson)){
             JsonNode jsonData = JsonValidateUtil.str2JsonNode(strJson);
             addAsGraph(jsonData);
+
+            // send to queue to delete first, and then index a new one
+            rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, key);
+            rabbitUtil.sendDirectMessage(Constant.ES_INDEX_QUEUE, strJson);
             return "Update success";
         }
         else {
@@ -342,7 +366,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String updateAllPlanWithEtag(String key, String strJson, String eTag) {
-        if (eTag!=null&&checkEtag(getPlanByKey(key), eTag)){
+        if (eTag == null || checkEtag(getPlanByKey(key), eTag)){
             return null;
         }
         return updateAllPlan(key, strJson);

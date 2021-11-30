@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -18,7 +19,15 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.MatchAllQueryBuilder;
+import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.script.ScriptType;
+import org.elasticsearch.script.mustache.SearchTemplateRequest;
+import org.elasticsearch.script.mustache.SearchTemplateResponse;
+import org.elasticsearch.search.SearchHit;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -83,6 +92,44 @@ public class ElasticsearchUtil {
         return indexResponse.status().equals(RestStatus.OK);
     }
 
+    public SearchHit[] searchChild(String parentType, String childType){
+        SearchTemplateRequest request = new SearchTemplateRequest();
+        request.setRequest(new SearchRequest(Constant.INDEX));
+        request.setScriptType(ScriptType.INLINE);
+        request.setScript("{\n" +
+                "  \"query\": {\n" +
+                "    \"bool\": {\n" +
+                "      \"must\": [\n" +
+                "        {\n" +
+                "          \"has_parent\" : {\n" +
+                "            \"parent_type\": \"{{parentType}}\",\n" +
+                "            \"query\": {\n" +
+                "              \"match_all\": {}\n" +
+                "            }\n" +
+                "        }\n" +
+                "        },\n" +
+                "        {\n" +
+                "          \"match\": {\n" +
+                "            \"objectType\": \"{{childType}}\"\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}");
+        Map<String, Object> scriptParams = new HashMap<>();
+        scriptParams.put("parentType", parentType);
+        scriptParams.put("childType", childType);
+        request.setScriptParams(scriptParams);
+        try {
+            SearchTemplateResponse response = client.searchTemplate(request, RequestOptions.DEFAULT);
+            return response.getResponse().getHits().getHits();
+        }catch (Exception e){
+            log.warn("Failed to find children: " + e.getMessage());
+            return null;
+        }
+    }
+
     public boolean addPlanDocument(String strJson){
         Map<String, String> map = convert2JoinRelation(JsonValidateUtil.str2JsonNode(strJson), "");
         AtomicBoolean flag = new AtomicBoolean(true);
@@ -114,6 +161,20 @@ public class ElasticsearchUtil {
             jsonObject.put(Constant.PARENT_PROP, parentID);
             jsonObject.put(Constant.CHILD_PROP, type);
             json.put(Constant.JOIN_FIELD, jsonObject);
+
+            if (type.equals(Constant.LINKED_PROP)){
+                // if there is a membercostshare already, remove the join relation from pre child
+                SearchHit[] pre = searchChild(Constant.BASIC_PROP, type);
+                if (pre != null && pre.length == 1){
+                    Map<String, Object> map = pre[0].getSourceAsMap();
+                    String preObjID = map.get(Constant.OBJECT_ID).toString();
+                    if (!preObjID.equals(childID)){
+                        map.remove(Constant.JOIN_FIELD);
+                        addDocument(new JSONObject(map).toJSONString(), preObjID);
+                        log.info("Removed the join relation from pre child: " + preObjID);
+                    }
+                }
+            }
             addDocument(json.toJSONString(), childID, parentID);
         }
         else {
@@ -133,8 +194,40 @@ public class ElasticsearchUtil {
         }
     }
 
+    public boolean updatePlanDocument(String parentID, String strJson){
+        Map<String, String> map =  json2MapRelation(JsonValidateUtil.str2JsonNode(strJson), parentID);
+        AtomicBoolean flag = new AtomicBoolean(true);
+        map.forEach((k, v) -> {
+            try {
+                if (!k.equals(parentID)){
+                    addJoinFieldAndIndex(k, v);
+                }
+            }catch (Exception e){
+                log.warn("Failed to update plan as Join relation: " + e.getMessage());
+                flag.set(false);
+            }
+        });
+        return flag.get();
+    }
+
+    public boolean deleteDocument(String type, String id){
+        DeleteByQueryRequest request = new DeleteByQueryRequest(Constant.INDEX);
+        if (type.equals(Constant.BASIC_PROP)){
+            request.setQuery(new MatchAllQueryBuilder());
+        }
+        else {
+            request.setQuery(new TermQueryBuilder(Constant.OBJECT_ID, id));
+        }
+        try {
+            client.deleteByQuery(request, RequestOptions.DEFAULT);
+            return true;
+        }catch (Exception e){
+            log.info("Failed to delete plan by routingId: " + e.getMessage());
+            return false;
+        }
+    }
+
     private static Map<String, String> convert2JoinRelation(JsonNode jsonData, String parentID){
-        Map<String, String> map = new HashMap<>();
         String id = jsonData.get(Constant.OBJECT_ID).asText();
         String ownKey;
         if (parentID.isEmpty()){
@@ -143,6 +236,11 @@ public class ElasticsearchUtil {
         else {
             ownKey = parentID + '_' + id;
         }
+        return json2MapRelation(jsonData, ownKey);
+    }
+
+    private static Map<String, String> json2MapRelation(JsonNode jsonData, String parentID){
+        Map<String, String> map = new HashMap<>();
         ObjectNode objectNode = new ObjectMapper().createObjectNode();
         Iterator<String> iterator = jsonData.fieldNames();
         while (iterator.hasNext()){
@@ -151,56 +249,58 @@ public class ElasticsearchUtil {
             if (node.isContainerNode()){
                 if (node.isArray()){
                     for (JsonNode n : node){
-                        map.putAll(convert2JoinRelation(n, ownKey));
+                        map.putAll(convert2JoinRelation(n, parentID));
                     }
                 }else {
-                    map.putAll(convert2JoinRelation(node, ownKey));
+                    map.putAll(convert2JoinRelation(node, parentID));
                 }
             }else {
                 objectNode.set(field, node);
             }
         }
-        map.put(ownKey, objectNode.toString());
+        map.put(parentID, objectNode.toString());
         return map;
+    }
+
+    @RabbitListener(queues = Constant.ES_INDEX_QUEUE)
+    public void processIndexingQueue(String message){
+        log.info("Indexing data by message from RabbitMQ: " + message);
+       if (addPlanDocument(message)){
+           log.info("Successfully index data into ES");
+       }
+    }
+
+    @RabbitListener(queues = Constant.ES_UPDATE_QUEUE)
+    public void processUpdateQueue(Map<String, String> message){
+        log.info("Updating data by message from RabbitMQ: " + message);
+        message.forEach((k, v) ->{
+            if (updatePlanDocument(k, v)){
+                log.info("Successfully update data at ES");
+            }
+        });
+    }
+
+    @RabbitListener(queues = Constant.ES_DELETE_QUEUE)
+    public void processDeleteQueue(String message){
+        log.info("Deleting data by message from RabbitMQ: " + message);
+        String[] s = message.split(Constant.SPLIT);
+        if (deleteDocument(s[0], s[1])){
+            log.info("Successfully delete data at ES");
+        }
     }
 
     public static void main(String[] args) throws Exception {
         String strJson = "{\n" +
-                "  \"planCostShares\": {\n" +
+                "   \"planCostShares\": {\n" +
                 "    \"deductible\": 2000,\n" +
                 "    \"_org\": \"example.com\",\n" +
                 "    \"copay\": 23,\n" +
                 "    \"objectId\": \"1234vxc2324sdf-501\",\n" +
                 "    \"objectType\": \"membercostshare\"\n" +
-                "  },\n" +
-                "  \"linkedPlanServices\": [\n" +
-                "    {\n" +
-                "      \"linkedService\": {\n" +
-                "        \"_org\": \"example.com\",\n" +
-                "        \"objectId\": \"1234520xvc30asdf-502\",\n" +
-                "        \"objectType\": \"service\",\n" +
-                "        \"name\": \"Yearly physical\"\n" +
-                "      },\n" +
-                "      \"planserviceCostShares\": {\n" +
-                "        \"deductible\": 10,\n" +
-                "        \"_org\": \"example.com\",\n" +
-                "        \"copay\": 0,\n" +
-                "        \"objectId\": \"1234512xvc1314asdfs-503\",\n" +
-                "        \"objectType\": \"membercostshare\"\n" +
-                "      },\n" +
-                "      \"_org\": \"example.com\",\n" +
-                "      \"objectId\": \"27283xvx9asdff-504\",\n" +
-                "      \"objectType\": \"planservice\"\n" +
-                "    }\n" +
-                "  ],\n" +
-                "  \"_org\": \"example.com\",\n" +
-                "  \"objectId\": \"12xvxc345ssdsds-508\",\n" +
-                "  \"objectType\": \"plan\",\n" +
-                "  \"planType\": \"inNetwork\",\n" +
-                "  \"creationDate\": \"12-12-2017\"\n" +
+                "  }\n" +
                 "}";
         JsonNode jsonNode = JsonValidateUtil.str2JsonNode(strJson);
-        Map<String, String> map = convert2JoinRelation(jsonNode, "");
+        Map<String, String> map = json2MapRelation(jsonNode, "12xvxc345ssdsds-508");
 //        map.forEach((k, v) -> {
 //            System.out.println(addJoinField(k, v));
 //        });

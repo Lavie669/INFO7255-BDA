@@ -12,7 +12,7 @@ public enum StatusCode {
     REDIS_GET_ERROR(400, "Can not find anything by this key"),
     REDIS_SET_ERROR(400, "Key/value store error"),
     REDIS_DEL_ERROR(400, "Can not delete by this key"),
-    UNKNOWN_ERROR(999, "Unknown error, please contact the technical staff");
+    UNKNOWN_ERROR(500, "Unknown error, please contact the technical staff");
 
     private final int code;
 
