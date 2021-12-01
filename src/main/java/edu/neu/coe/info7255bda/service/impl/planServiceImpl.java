@@ -255,9 +255,15 @@ public class planServiceImpl implements PlanService {
         String edge = redisUtil.getByKey(key).toString();
         if (edge.contains(",")){
             newS += ',';
+            for (String s : edge.split(",")){
+                rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, s);
+            }
+        }
+        else {
+            rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, edge);
         }
         if (redisUtil.setKV(key, newS)){
-            rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, edge);
+
             return "Deletion success";
         }
         else {
@@ -355,6 +361,13 @@ public class planServiceImpl implements PlanService {
 
             // send to queue to delete first, and then index a new one
             rabbitUtil.sendDirectMessage(Constant.ES_DELETE_QUEUE, key);
+
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+
             rabbitUtil.sendDirectMessage(Constant.ES_INDEX_QUEUE, strJson);
             return "Update success";
         }

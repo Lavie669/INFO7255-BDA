@@ -33,6 +33,6 @@ public class ESearchServiceImpl implements ESearchService {
 
     @Override
     public SearchHit[] searchByChildAndParentType(String parentType, String childType) {
-        return esUtil.searchChild(parentType, childType);
+        return esUtil.searchChildByType(parentType, childType);
     }
 }

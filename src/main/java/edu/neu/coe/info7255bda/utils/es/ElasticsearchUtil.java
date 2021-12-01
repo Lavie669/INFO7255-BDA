@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.neu.coe.info7255bda.constant.Constant;
 import edu.neu.coe.info7255bda.utils.json.JsonValidateUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
@@ -19,9 +20,9 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.MatchAllQueryBuilder;
-import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
+import org.elasticsearch.join.query.JoinQueryBuilders;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.script.mustache.SearchTemplateRequest;
@@ -78,21 +79,32 @@ public class ElasticsearchUtil {
         return indexResponse.status().equals(RestStatus.OK);
     }
 
-    private boolean addDocument(String strJson, String id) throws Exception {
+    public boolean addDocument(String strJson, String id) throws Exception {
         IndexRequest indexRequest = new IndexRequest(Constant.INDEX)
                 .id(id).source(strJson, XContentType.JSON);
         IndexResponse indexResponse = client.index(indexRequest, RequestOptions.DEFAULT);
         return indexResponse.status().equals(RestStatus.OK);
     }
 
-    private boolean addDocument(String strJson, String childID, String routingID) throws Exception {
+    public boolean addDocument(String strJson, String childID, String routingID) throws Exception {
         IndexRequest indexRequest = new IndexRequest(Constant.INDEX)
                 .id(childID).routing(routingID).source(strJson, XContentType.JSON);
         IndexResponse indexResponse = client.index(indexRequest, RequestOptions.DEFAULT);
         return indexResponse.status().equals(RestStatus.OK);
     }
 
-    public SearchHit[] searchChild(String parentType, String childType){
+    public boolean deleteDocumentByQuery(QueryBuilder queryBuilder){
+        DeleteByQueryRequest request = new DeleteByQueryRequest(Constant.INDEX).setQuery(queryBuilder);
+        try {
+            client.deleteByQuery(request, RequestOptions.DEFAULT);
+            return true;
+        }catch (Exception e){
+            log.info("Failed to delete plan by query: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public SearchHit[] searchChildByType(String parentType, String childType){
         SearchTemplateRequest request = new SearchTemplateRequest();
         request.setRequest(new SearchRequest(Constant.INDEX));
         request.setScriptType(ScriptType.INLINE);
@@ -164,7 +176,7 @@ public class ElasticsearchUtil {
 
             if (type.equals(Constant.LINKED_PROP)){
                 // if there is a membercostshare already, remove the join relation from pre child
-                SearchHit[] pre = searchChild(Constant.BASIC_PROP, type);
+                SearchHit[] pre = searchChildByType(Constant.BASIC_PROP, type);
                 if (pre != null && pre.length == 1){
                     Map<String, Object> map = pre[0].getSourceAsMap();
                     String preObjID = map.get(Constant.OBJECT_ID).toString();
@@ -210,20 +222,16 @@ public class ElasticsearchUtil {
         return flag.get();
     }
 
-    public boolean deleteDocument(String type, String id){
-        DeleteByQueryRequest request = new DeleteByQueryRequest(Constant.INDEX);
+    public boolean deletePlanDocument(String type, String id){
         if (type.equals(Constant.BASIC_PROP)){
-            request.setQuery(new MatchAllQueryBuilder());
+            // delete all
+            return deleteDocumentByQuery(new MatchAllQueryBuilder());
         }
         else {
-            request.setQuery(new TermQueryBuilder(Constant.OBJECT_ID, id));
-        }
-        try {
-            client.deleteByQuery(request, RequestOptions.DEFAULT);
-            return true;
-        }catch (Exception e){
-            log.info("Failed to delete plan by routingId: " + e.getMessage());
-            return false;
+            //delete children and parent
+            deleteDocumentByQuery(JoinQueryBuilders.hasParentQuery(type,
+                    QueryBuilders.matchQuery(Constant.OBJECT_ID, id), false));
+            return deleteDocumentByQuery(new TermQueryBuilder(Constant.OBJECT_ID, id));
         }
     }
 
@@ -284,7 +292,7 @@ public class ElasticsearchUtil {
     public void processDeleteQueue(String message){
         log.info("Deleting data by message from RabbitMQ: " + message);
         String[] s = message.split(Constant.SPLIT);
-        if (deleteDocument(s[0], s[1])){
+        if (deletePlanDocument(s[0], s[1])){
             log.info("Successfully delete data at ES");
         }
     }
