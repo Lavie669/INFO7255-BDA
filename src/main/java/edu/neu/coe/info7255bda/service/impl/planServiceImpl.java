@@ -312,6 +312,7 @@ public class planServiceImpl implements PlanService {
             String fieldName = iterator.next();
             JsonNode node = jsonNode.get(fieldName);
             if (node.isContainerNode()){
+                checkUpdate(fieldName, node);
                 String edge = key + '_' + fieldName;
                 if (keys.contains(edge)){
                     String edgeVal = redisUtil.getByKey(edge).toString();
@@ -345,7 +346,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String updatePlanWithEtag(String key, String strJson, String eTag) {
-        if (eTag!=null&&checkEtag(getPlanByKey(key), eTag)){
+        if (checkEtag(getPlanByKey(key), eTag)){
             return null;
         }
         return updatePlan(key, strJson);
@@ -379,7 +380,7 @@ public class planServiceImpl implements PlanService {
 
     @Override
     public String updateAllPlanWithEtag(String key, String strJson, String eTag) {
-        if (eTag == null || checkEtag(getPlanByKey(key), eTag)){
+        if (checkEtag(getPlanByKey(key), eTag)){
             return null;
         }
         return updateAllPlan(key, strJson);
@@ -438,6 +439,14 @@ public class planServiceImpl implements PlanService {
         }
         else if (!jsonNode.has(Constant.OBJECT_TYPE)){
             throw new Customer400Exception(400, "Missing " + Constant.OBJECT_TYPE);
+        }
+    }
+
+    private void checkUpdate(String fieldName, JsonNode node){
+        JsonNode jsonSchema = JsonUtil.readFromFileToJson(Constant.OTHER_SCHEMA_FILE_PATH);
+        if (!JsonValidateUtil.isValidated(jsonSchema.get(fieldName), node.toString())){
+            String result = JsonValidateUtil.validateJson(jsonSchema.get(fieldName), node.toString());
+            throw new Customer400Exception(StatusCode.JSON_SCHEMA_ERROR.getCode(), result);
         }
     }
 

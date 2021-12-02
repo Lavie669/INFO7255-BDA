@@ -4,6 +4,7 @@ public class Constant {
 
     public static final String DIR_PREFIX = "./src/main/resources";
     public final static String PLAN_SCHEMA_FILE_PATH = DIR_PREFIX + "/json/schema/PlanSchema.json";
+    public final static String OTHER_SCHEMA_FILE_PATH = DIR_PREFIX + "/json/schema/membercostshareSchema.json";
 
     public final static String SPLIT = "_";
 

@@ -175,17 +175,10 @@ public class ElasticsearchUtil {
             json.put(Constant.JOIN_FIELD, jsonObject);
 
             if (type.equals(Constant.LINKED_PROP)){
-                // if there is a membercostshare already, remove the join relation from pre child
-                SearchHit[] pre = searchChildByType(Constant.BASIC_PROP, type);
-                if (pre != null && pre.length == 1){
-                    Map<String, Object> map = pre[0].getSourceAsMap();
-                    String preObjID = map.get(Constant.OBJECT_ID).toString();
-                    if (!preObjID.equals(childID)){
-                        map.remove(Constant.JOIN_FIELD);
-                        addDocument(new JSONObject(map).toJSONString(), preObjID);
-                        log.info("Removed the join relation from pre child: " + preObjID);
-                    }
-                }
+                // if there is a planCostShares already, remove it
+                deleteDocumentByQuery(QueryBuilders.boolQuery()
+                        .must(JoinQueryBuilders.hasParentQuery(Constant.BASIC_PROP, QueryBuilders.matchQuery(Constant.OBJECT_ID, parentID), false))
+                        .must(QueryBuilders.matchQuery(Constant.OBJECT_TYPE, type)));
             }
             addDocument(json.toJSONString(), childID, parentID);
         }

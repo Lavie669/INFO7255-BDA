@@ -97,21 +97,44 @@ public class JsonUtil {
 
     public static void main(String[] args) throws Exception {
         String strJson = "{\n" +
-                "\t\"planCostShares\": {\n" +
-                "\t\t\"deductible\": 2000,\n" +
+                "  \"linkedPlanServices\": [{\n" +
+                "\t\t\"linkedService\": {\n" +
+                "\t\t\t\"_org\": \"example.com\",\n" +
+                "\t\t\t\"objectId\": \"1234520xvc30asdf-502\",\n" +
+                "\t\t\t\"objectType\": \"service\",\n" +
+                "\t\t\t\"name\": \"Yearly physical\"\n" +
+                "\t\t},\n" +
+                "\t\t\"planserviceCostShares\": {\n" +
+                "\t\t\t\"deductible\": 10,\n" +
+                "\t\t\t\"_org\": \"example.com\",\n" +
+                "\t\t\t\"copay\": 0,\n" +
+                "\t\t\t\"objectId\": \"1234512xvc1314asdfs-503\",\n" +
+                "\t\t\t\"objectType\": \"membercostshare\"\n" +
+                "\t\t},\n" +
                 "\t\t\"_org\": \"example.com\",\n" +
-                "\t\t\"copay\": 23,\n" +
-                "\t\t\"objectId\": \"1234vxc2324sdf-501\",\n" +
-                "\t\t\"objectType\": \"membercostshare\"\n" +
-                "\t\t\n" +
-                "\t},\n" +
-                "\t\"_org\": \"example.com\",\n" +
-                "\t\"objectId\": \"12xvxc345ssdsds-508\",\n" +
-                "\t\"objectType\": \"plan\",\n" +
-                "\t\"planType\": \"inNetwork\",\n" +
-                "\t\"creationDate\": \"12-12-2017\"\n" +
+                "\t\t\"objectId\": \"27283xvx9asdff-504\",\n" +
+                "\t\t\"objectType\": \"planservice\"\n" +
+                "\t}, {\n" +
+                "\t\t\"linkedService\": {\n" +
+                "\t\t\t\"_org\": \"example.com\",\n" +
+                "\t\t\t\"objectId\": \"1234520xvc30sfs-505\",\n" +
+                "\t\t\t\"objectType\": \"service\",\n" +
+                "\t\t\t\"name\": \"well baby\"\n" +
+                "\t\t},\n" +
+                "\t\t\"planserviceCostShares\": {\n" +
+                "\t\t\t\"deductible\": 10,\n" +
+                "\t\t\t\"_org\": \"example.com\",\n" +
+                "\t\t\t\"copay\": 175,\n" +
+                "\t\t\t\"objectId\": \"1234512xvc1314sdfsd-506\",\n" +
+                "\t\t\t\"objectType\": \"membercostshare\"\n" +
+                "\t\t},\n" +
+                "\t\t\"_org\": \"example.com\",\n" +
+                "\t\t\"objectId\": \"27283xvx9sdf-507\",\n" +
+                "\t\t\"objectType\": \"planservice\"\n" +
+                "\t}]\n" +
                 "}";
-        JsonNode  jsonNode = JsonValidateUtil.str2JsonNode(strJson);
-        System.out.println(convert2Graph(jsonNode, "", ""));
+        JsonNode jsonSchema = readFromFileToJson(Constant.DIR_PREFIX + "/json/schema/membercostshareSchema.json");
+        JsonNode jsonNode = JsonValidateUtil.str2JsonNode(strJson);
+        System.out.println(JsonValidateUtil.validateJson(jsonSchema.get("linkedPlanServices"), jsonNode.get("linkedPlanServices").toString()));
     }
 }
